@@ -1,0 +1,1685 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import Logo from '@/components/Logo';
+import {
+  connectEzoBluetooth,
+  connectEzoSerial,
+  getEzoConnectionStatus,
+  printBillToEzoPrinter,
+  generateTestSlipBytes,
+  sendRawBytesToPrinter,
+  printVia58mmWindow,
+} from '@/lib/thermalPrinter';
+
+interface ServiceItem {
+  id: string;
+  name: string;
+  price: number;
+  duration?: number;
+  image?: string;
+  category?: { name: string; gender?: string };
+  categoryName?: string;
+}
+
+interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  whatsapp?: string;
+  status?: string;
+  lastVisit?: string;
+  totalSpent?: number;
+  totalVisits?: number;
+  notes?: string;
+}
+
+interface BillItem {
+  serviceId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
+
+// ── Curated high-definition distinct salon photography ─────────────
+// Every service gets a visually unique image — no repeats
+const DISTINCT_SERVICE_IMAGES: Record<string, string> = {
+  // ─── MEN'S SERVICES ───
+  'normal hair cut': 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80',
+  'hair cut (men)': 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80',
+  'change of style': 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=500&auto=format&fit=crop&q=80',
+  'kids hair cut / kids (up to 10 yrs)': 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=500&auto=format&fit=crop&q=80',
+  'kids hair cut': 'https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=500&auto=format&fit=crop&q=80',
+  'head shave': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=500&auto=format&fit=crop&q=80',
+  'head shave for kids': 'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?w=500&auto=format&fit=crop&q=80',
+  'shaving': 'https://images.unsplash.com/photo-1512690459411-b9245aed614b?w=500&auto=format&fit=crop&q=80',
+  'shave': 'https://images.unsplash.com/photo-1512690459411-b9245aed614b?w=500&auto=format&fit=crop&q=80',
+  'beard setting': 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=500&auto=format&fit=crop&q=80',
+  'beard set': 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=500&auto=format&fit=crop&q=80',
+  'beard design': 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=500&auto=format&fit=crop&q=80',
+  'beard trim': 'https://images.unsplash.com/photo-1517832606589-7629c3397143?w=500&auto=format&fit=crop&q=80',
+  'beard colour': 'https://images.unsplash.com/photo-1578070181910-f1e514afdd08?w=500&auto=format&fit=crop&q=80',
+
+  // ─── HAIR SPA & TREATMENT ───
+  'express hair spa': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+  'moisturizing hair spa': 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=500&auto=format&fit=crop&q=80',
+  'repairing hair spa': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'fibre clinix treatment': 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=500&auto=format&fit=crop&q=80',
+  'anti-dandruff treatment': 'https://images.unsplash.com/photo-1519735777090-ec97162dc266?w=500&auto=format&fit=crop&q=80',
+  'anti-hair fall treatment': 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=500&auto=format&fit=crop&q=80',
+
+  // ─── MASSAGE ───
+  'head massage': 'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=500&auto=format&fit=crop&q=80',
+  'head oil massage': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'head tonic massage': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+
+  // ─── HAIR WASH & STYLING ───
+  'head wash': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'hair wash & setting': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'hair styling': 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=500&auto=format&fit=crop&q=80',
+
+  // ─── HAIR COLOR ───
+  'straightening / smoothing': 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500&auto=format&fit=crop&q=80',
+  'botox': 'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=500&auto=format&fit=crop&q=80',
+  'biotin': 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=500&auto=format&fit=crop&q=80',
+  'grey coverage': 'https://images.unsplash.com/photo-1522337094346-2917730e7845?w=500&auto=format&fit=crop&q=80',
+  'ammonia free grey coverage': 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=500&auto=format&fit=crop&q=80',
+  'fashion colour': 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=500&auto=format&fit=crop&q=80',
+  "l'oréal colour": 'https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=500&auto=format&fit=crop&q=80',
+  'streaks colour': 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=500&auto=format&fit=crop&q=80',
+  'crown colour': 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=500&auto=format&fit=crop&q=80',
+  'normal hair black colour': 'https://images.unsplash.com/photo-1522337094346-2917730e7845?w=500&auto=format&fit=crop&q=80',
+
+  // ─── WOMEN'S / UNISEX SERVICES ───
+  'hair cut (women)': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'facial': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'clean up': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'threading': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&auto=format&fit=crop&q=80',
+  'waxing': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'manicure': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&auto=format&fit=crop&q=80',
+  'pedicure': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&auto=format&fit=crop&q=80',
+  'bleach': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'bridal makeup': 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=500&auto=format&fit=crop&q=80',
+  'party makeup': 'https://images.unsplash.com/photo-1526045478516-99145907023c?w=500&auto=format&fit=crop&q=80',
+  'hair spa (women)': 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=500&auto=format&fit=crop&q=80',
+  'keratin treatment': 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500&auto=format&fit=crop&q=80',
+  'hair colour (women)': 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?w=500&auto=format&fit=crop&q=80',
+  'global colour': 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=500&auto=format&fit=crop&q=80',
+  'highlights': 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=500&auto=format&fit=crop&q=80',
+  'hair straightening': 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500&auto=format&fit=crop&q=80',
+  'hair smoothing': 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=500&auto=format&fit=crop&q=80',
+  'd-tan': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+};
+
+const DISTINCT_IMAGE_POOL = [
+  'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1512690459411-b9245aed614b?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=500&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1526045478516-99145907023c?w=500&auto=format&fit=crop&q=80',
+];
+
+function getServiceImage(name: string, index: number = 0): string {
+  const key = name.toLowerCase().trim();
+  if (DISTINCT_SERVICE_IMAGES[key]) {
+    return DISTINCT_SERVICE_IMAGES[key];
+  }
+  // Try partial match
+  for (const [k, url] of Object.entries(DISTINCT_SERVICE_IMAGES)) {
+    if (key.includes(k) || k.includes(key)) return url;
+  }
+  // Fallback to deterministic item in image pool
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const idx = Math.abs(hash + index) % DISTINCT_IMAGE_POOL.length;
+  return DISTINCT_IMAGE_POOL[idx];
+}
+
+const MEN_CATEGORIES = [
+  'All',
+  'Hair Cut & Shave',
+  'Beard Grooming',
+  'Facial & D-Tan',
+  'Hair Spa & Massage',
+  'Hair Color',
+];
+
+const WOMEN_CATEGORIES = [
+  'All',
+  'Hair Cut & Styling',
+  'Facial & Clean Up',
+  'Threading & Waxing',
+  'Hair Spa & Treatment',
+  'Bridal & Makeup',
+  'Nails & Pedicure',
+];
+
+export default function AdminBillingPOSPage() {
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [genderSection, setGenderSection] = useState<'men' | 'women'>('men');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [searchCustomer, setSearchCustomer] = useState('');
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+
+  // Selected customer & anonymous walk-in flag
+  const [isWalkInAnonymous, setIsWalkInAnonymous] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer>({
+    id: 'walkin-default',
+    name: 'Rahul Nair',
+    phone: '+91 98765 43210',
+    status: 'regular',
+    lastVisit: '10 Jun 2025',
+    totalSpent: 2400,
+  });
+
+  // Current Cart / Bill - start clean for POS operations
+  const [billItems, setBillItems] = useState<BillItem[]>([]);
+
+  const [discount, setDiscount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'other'>('cash');
+
+  // Generate Bill Modal state
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [sendWhatsApp, setSendWhatsApp] = useState(false);
+  const [printPhysical, setPrintPhysical] = useState(true);
+  const [billNotes, setBillNotes] = useState('');
+  const [generatedBillNo, setGeneratedBillNo] = useState('HM-2025-06-0012');
+  const [generatedDate, setGeneratedDate] = useState('');
+  const [generatedTime, setGeneratedTime] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  // New Client Modal (Phone only required)
+  const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({
+    name: '',
+    phone: '',
+    whatsapp: '',
+    status: 'new',
+    notes: '',
+  });
+
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadInitialData();
+    const now = new Date();
+    setGeneratedDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+    setGeneratedTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  }, []);
+
+  const loadInitialData = async () => {
+    try {
+      const [srvRes, custRes] = await Promise.all([
+        fetch('/api/services'),
+        fetch('/api/customers'),
+      ]);
+
+      if (srvRes.ok) {
+        const srvData = await srvRes.json();
+        const loadedServices: ServiceItem[] = srvData.services || [];
+        setServices(loadedServices);
+      }
+
+      if (custRes.ok) {
+        const custData = await custRes.json();
+        setCustomers(custData || []);
+        if (custData && custData.length > 0) {
+          setSelectedCustomer(custData[0]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load POS data:', err);
+    }
+  };
+
+  // Add Service to Bill with distinct image
+  const handleAddService = (service: ServiceItem, index: number) => {
+    const img = service.image || getServiceImage(service.name, index);
+
+    setBillItems((prev) => {
+      const existingIdx = prev.findIndex((item) => item.serviceId === service.id);
+      if (existingIdx >= 0) {
+        const copy = [...prev];
+        copy[existingIdx].quantity += 1;
+        return copy;
+      }
+      return [
+        ...prev,
+        {
+          serviceId: service.id,
+          name: service.name,
+          price: service.price,
+          quantity: 1,
+          image: img,
+        },
+      ];
+    });
+  };
+
+  // Update item quantity
+  const handleUpdateQty = (index: number, delta: number) => {
+    setBillItems((prev) => {
+      const copy = [...prev];
+      const newQty = copy[index].quantity + delta;
+      if (newQty <= 0) {
+        return copy.filter((_, i) => i !== index);
+      }
+      copy[index].quantity = newQty;
+      return copy;
+    });
+  };
+
+  // Remove item
+  const handleRemoveItem = (index: number) => {
+    setBillItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Clear bill
+  const handleClearBill = () => {
+    setBillItems([]);
+    setDiscount(0);
+  };
+
+  // Calculations with precise numbers
+  const subtotal = billItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const totalAmount = Math.max(0, subtotal - discount);
+
+  // Men & Women service partition helpers
+  const isMenService = (s: ServiceItem) => {
+    const g = s.category?.gender?.toLowerCase();
+    if (g === 'men') return true;
+    if (g === 'women') return false;
+    const name = s.name.toLowerCase();
+    if (name.includes('(men)') || name.includes('beard') || name.includes('shave')) return true;
+    if (
+      name.includes('(women)') ||
+      name.includes('threading') ||
+      name.includes('waxing') ||
+      name.includes('clean up') ||
+      name.includes('bridal') ||
+      name.includes('makeup') ||
+      name.includes('pedicure') ||
+      name.includes('manicure') ||
+      name.includes('keratin') ||
+      name.includes('smoothing') ||
+      name.includes('bleach')
+    )
+      return false;
+    return true; // Unisex services like Hair Spa, Facial, Head Massage appear in both
+  };
+
+  const isWomenService = (s: ServiceItem) => {
+    const g = s.category?.gender?.toLowerCase();
+    if (g === 'women') return true;
+    if (g === 'men') return false;
+    const name = s.name.toLowerCase();
+    if (
+      name.includes('(women)') ||
+      name.includes('threading') ||
+      name.includes('waxing') ||
+      name.includes('clean up') ||
+      name.includes('bridal') ||
+      name.includes('makeup') ||
+      name.includes('pedicure') ||
+      name.includes('manicure') ||
+      name.includes('keratin') ||
+      name.includes('smoothing') ||
+      name.includes('bleach')
+    )
+      return true;
+    if (name.includes('(men)') || name.includes('beard') || name.includes('shave')) return false;
+    return true; // Unisex services appear in both
+  };
+
+  const menServices = services.filter(isMenService);
+  const womenServices = services.filter(isWomenService);
+  const activeSectionServices = genderSection === 'men' ? menServices : womenServices;
+  const currentCategories = genderSection === 'men' ? MEN_CATEGORIES : WOMEN_CATEGORIES;
+
+  // Filtered services
+  const filteredServices = activeSectionServices.filter((s) => {
+    if (selectedCategory === 'All') return true;
+    const name = s.name.toLowerCase();
+    const cat = (s.category?.name || s.categoryName || '').toLowerCase();
+
+    if (genderSection === 'men') {
+      if (selectedCategory === 'Hair Cut & Shave')
+        return name.includes('cut') || name.includes('shav') || name.includes('hair') || cat.includes('cut');
+      if (selectedCategory === 'Beard Grooming')
+        return name.includes('beard') || name.includes('trim') || name.includes('shav');
+      if (selectedCategory === 'Facial & D-Tan')
+        return name.includes('facial') || name.includes('tan') || name.includes('skin') || name.includes('clean');
+      if (selectedCategory === 'Hair Spa & Massage')
+        return name.includes('spa') || name.includes('massag') || name.includes('dandruff') || name.includes('fall');
+      if (selectedCategory === 'Hair Color')
+        return name.includes('color') || name.includes('colour') || name.includes('streak') || name.includes('highlight');
+    } else {
+      if (selectedCategory === 'Hair Cut & Styling')
+        return name.includes('cut') || name.includes('style') || name.includes('wash') || name.includes('blow') || name.includes('hair');
+      if (selectedCategory === 'Facial & Clean Up')
+        return name.includes('facial') || name.includes('clean') || name.includes('skin') || name.includes('glow') || name.includes('bleach');
+      if (selectedCategory === 'Threading & Waxing')
+        return name.includes('thread') || name.includes('wax');
+      if (selectedCategory === 'Hair Spa & Treatment')
+        return name.includes('spa') || name.includes('keratin') || name.includes('botox') || name.includes('smoothing') || name.includes('treatment') || name.includes('fibre');
+      if (selectedCategory === 'Bridal & Makeup')
+        return name.includes('bridal') || name.includes('makeup') || name.includes('party');
+      if (selectedCategory === 'Nails & Pedicure')
+        return name.includes('pedicure') || name.includes('manicure') || name.includes('nail');
+    }
+    return cat.includes(selectedCategory.toLowerCase()) || name.includes(selectedCategory.toLowerCase());
+  });
+
+  // Customer search suggestions (search by phone or name)
+  const filteredCustomers = searchCustomer.trim()
+    ? customers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(searchCustomer.toLowerCase()) ||
+          c.phone.includes(searchCustomer)
+      )
+    : [];
+
+  const handleSelectCustomer = (c: Customer) => {
+    setSelectedCustomer(c);
+    setIsWalkInAnonymous(false);
+    setSearchCustomer('');
+    setIsSearchingCustomer(false);
+  };
+
+  // Option to proceed without customer details (Walk-in / Anonymous)
+  const handleSetAnonymousWalkIn = () => {
+    setIsWalkInAnonymous(true);
+    setSelectedCustomer({
+      id: 'walkin-anonymous',
+      name: 'Walk-in Guest',
+      phone: 'Not Provided',
+      status: 'walk-in',
+      lastVisit: 'Today',
+      totalSpent: 0,
+    });
+    setSearchCustomer('');
+    setIsSearchingCustomer(false);
+  };
+
+  // Create New Client - only contact number is required!
+  const handleCreateNewClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClientForm.phone || !newClientForm.phone.trim()) {
+      alert('Please enter client contact number.');
+      return;
+    }
+
+    try {
+      const cleanPhone = newClientForm.phone.trim();
+      const digits = cleanPhone.replace(/\D/g, '');
+      const derivedName =
+        newClientForm.name && newClientForm.name.trim()
+          ? newClientForm.name.trim()
+          : digits.length >= 4
+          ? `Client ${digits.slice(-4)}`
+          : `Client ${cleanPhone}`;
+
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: derivedName,
+          phone: cleanPhone,
+          whatsapp: newClientForm.whatsapp || cleanPhone,
+          status: newClientForm.status || 'new',
+          notes: newClientForm.notes,
+        }),
+      });
+
+      if (res.ok) {
+        const created = await res.json();
+        setSelectedCustomer({
+          id: created.id,
+          name: created.name,
+          phone: created.phone,
+          status: created.status || 'new',
+          lastVisit: 'Today',
+          totalSpent: 0,
+        });
+        setIsWalkInAnonymous(false);
+        setCustomers((prev) => [created, ...prev.filter((c) => c.id !== created.id)]);
+        setShowNewClientModal(false);
+        setNewClientForm({ name: '', phone: '', whatsapp: '', status: 'new', notes: '' });
+        setSuccessNotice(`Client ${created.phone} attached to bill!`);
+        setTimeout(() => setSuccessNotice(null), 3000);
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to save customer');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error creating client. Please try again.');
+    }
+  };
+
+  // Open Generate Bill Modal
+  const handleOpenGenerateBill = () => {
+    if (billItems.length === 0) return;
+    const now = new Date();
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    setGeneratedBillNo(`HM-2025-06-${randomNum}`);
+    setGeneratedDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
+    setGeneratedTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setShowGenerateModal(true);
+  };
+
+  // EZO 58mm Printer Hardware State
+  const [printerStatus, setPrinterStatus] = useState<'ready' | 'bluetooth' | 'serial'>('ready');
+  const [printerDeviceName, setPrinterDeviceName] = useState<string>('EZO 58mm Portable');
+  const [connectingPrinter, setConnectingPrinter] = useState(false);
+  const [printerNotice, setPrinterNotice] = useState<string | null>(null);
+  const [isAndroidNative, setIsAndroidNative] = useState(false);
+
+  // Auto-detect native Android and saved printer on billing page mount
+  useEffect(() => {
+    async function checkNative() {
+      try {
+        const bt = await import('@/lib/bluetoothPrinter');
+        if (bt.isNativeBluetoothAvailable()) {
+          setIsAndroidNative(true);
+          const saved = bt.getSavedPrinterAddress();
+          if (saved) {
+            const status = await bt.getPrinterStatus();
+            if (status.status === 'connected') {
+              setPrinterStatus('bluetooth');
+              setPrinterDeviceName(status.deviceName || saved.name);
+            } else {
+              // Try connecting to saved printer automatically
+              const conn = await bt.connectBluetoothPrinter(saved.address);
+              if (conn.success) {
+                setPrinterStatus('bluetooth');
+                setPrinterDeviceName(conn.deviceName || saved.name);
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+    checkNative();
+  }, []);
+
+  // Connect EZO via Bluetooth (Android Native or Web Bluetooth)
+  const handleConnectBluetooth = async () => {
+    setConnectingPrinter(true);
+    setPrinterNotice(null);
+
+    if (isAndroidNative) {
+      try {
+        const bt = await import('@/lib/bluetoothPrinter');
+        const avail = await bt.checkBluetoothAvailability();
+        if (!avail.available || !avail.enabled) {
+          setPrinterNotice('Please turn on Bluetooth in tablet settings.');
+          setConnectingPrinter(false);
+          return;
+        }
+        if (!avail.hasPermission) {
+          const perm = await bt.requestBluetoothPermissions();
+          if (!perm.granted) {
+            setPrinterNotice('Bluetooth permission denied.');
+            setConnectingPrinter(false);
+            return;
+          }
+        }
+        const list = await bt.listBluetoothPrinters();
+        if (list.success && list.devices.length > 0) {
+          const target = list.devices.find((d) => d.isPrinter) || list.devices[0];
+          const conn = await bt.connectBluetoothPrinter(target.address);
+          if (conn.success) {
+            setPrinterStatus('bluetooth');
+            setPrinterDeviceName(conn.deviceName || target.name);
+            bt.savePrinterAddress(target.address, target.name);
+            setPrinterNotice(`Connected to ${conn.deviceName || target.name}!`);
+          } else {
+            setPrinterNotice(conn.error || 'Connection failed.');
+          }
+        } else {
+          setPrinterNotice('No paired printer found. Please pair in Android Settings.');
+        }
+      } catch (e: any) {
+        setPrinterNotice(e.message || 'Bluetooth connection failed');
+      }
+      setConnectingPrinter(false);
+      return;
+    }
+
+    try {
+      const res = await connectEzoBluetooth();
+      if (res.success) {
+        setPrinterStatus('bluetooth');
+        setPrinterDeviceName(res.deviceName || 'EZO 58mm (Bluetooth)');
+        setPrinterNotice(`Connected to ${res.deviceName || 'EZO Bluetooth'}!`);
+      } else {
+        setPrinterNotice(res.error || 'Bluetooth pairing cancelled');
+      }
+    } catch (e: any) {
+      setPrinterNotice(e.message || 'Bluetooth connection failed');
+    } finally {
+      setConnectingPrinter(false);
+    }
+  };
+
+  // Connect EZO via USB Serial
+  const handleConnectUSB = async () => {
+    setConnectingPrinter(true);
+    setPrinterNotice(null);
+    try {
+      const res = await connectEzoSerial();
+      if (res.success) {
+        setPrinterStatus('serial');
+        setPrinterDeviceName('EZO 58mm (USB Serial)');
+        setPrinterNotice('Connected via USB Serial Cable!');
+      } else {
+        setPrinterNotice(res.error || 'USB Serial connection failed');
+      }
+    } catch (e: any) {
+      setPrinterNotice(e.message || 'Serial connection failed');
+    } finally {
+      setConnectingPrinter(false);
+    }
+  };
+
+  // Test Print to EZO Printer
+  const handleTestPrint = async () => {
+    try {
+      const testBytes = generateTestSlipBytes();
+      const sent = await sendRawBytesToPrinter(testBytes);
+      if (sent) {
+        setPrinterNotice('Test slip printed via hardware connection!');
+      } else {
+        printVia58mmWindow({
+          billNo: 'HM-TEST-58MM',
+          date: generatedDate,
+          time: generatedTime,
+          customerName: 'Diagnostic Slip',
+          items: [{ name: 'EZO 58mm Test Receipt', quantity: 1, price: 0 }],
+          subtotal: 0,
+          discount: 0,
+          total: 0,
+          paymentMethod: 'TEST OK',
+        });
+        setPrinterNotice('Test receipt sent to 58mm print driver!');
+      }
+    } catch (e: any) {
+      alert('Test print error: ' + e.message);
+    }
+  };
+
+  // Thermal Print trigger (Sends directly to EZO 58mm printer)
+  const triggerThermalPrint = async () => {
+    try {
+      await printBillToEzoPrinter({
+        billNo: generatedBillNo,
+        date: generatedDate,
+        time: generatedTime,
+        customerName: isWalkInAnonymous ? 'Walk-in Guest' : selectedCustomer.name,
+        customerPhone: isWalkInAnonymous ? 'Not Provided' : selectedCustomer.phone,
+        items: billItems.map((b) => ({
+          name: b.name,
+          quantity: b.quantity,
+          price: b.price,
+        })),
+        subtotal,
+        discount,
+        total: totalAmount,
+        paymentMethod,
+        notes: billNotes,
+      });
+    } catch (err) {
+      console.error(err);
+      window.print();
+    }
+  };
+
+  // Trigger WhatsApp Bill
+  const triggerWhatsAppBill = () => {
+    if (isWalkInAnonymous || selectedCustomer.phone === 'Not Provided') {
+      alert('Cannot send WhatsApp bill: Customer chose not to share contact number.');
+      return;
+    }
+    const phone = selectedCustomer.phone.replace(/[^0-9]/g, '');
+    if (!phone) {
+      alert('Valid phone number not found for WhatsApp.');
+      return;
+    }
+    const itemList = billItems
+      .map((item) => `• ${item.name} x${item.quantity} = ₹${item.price * item.quantity}`)
+      .join('\n');
+
+    const message =
+      `*HAIR MART STUDIO — SURATHKAL*\n` +
+      `Bill No: ${generatedBillNo}\n` +
+      `Date: ${generatedDate} ${generatedTime}\n` +
+      `Customer: ${selectedCustomer.name}\n` +
+      `Phone: ${selectedCustomer.phone}\n\n` +
+      `*Services:*\n${itemList}\n\n` +
+      `Subtotal: ₹${subtotal}\n` +
+      (discount > 0 ? `Discount: ₹${discount}\n` : '') +
+      `*Total Amount: ₹${totalAmount}* (${paymentMethod.toUpperCase()})\n\n` +
+      `Thank you for visiting HairMart! Keep looking good, always. ✨`;
+
+    const url = `https://wa.me/${phone.startsWith('91') ? phone : '91' + phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  // Complete & Store Bill in Database
+  const handleCompleteBill = async () => {
+    setIsProcessing(true);
+    try {
+      const apptRes = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: isWalkInAnonymous ? 'Walk-in Guest' : selectedCustomer.name,
+          customerPhone: isWalkInAnonymous ? 'Not Provided' : selectedCustomer.phone,
+          customerWhatsapp: isWalkInAnonymous ? null : selectedCustomer.phone,
+          customerNote: billNotes,
+          date: new Date().toISOString(),
+          time: generatedTime,
+          status: 'completed',
+          isWalkIn: isWalkInAnonymous,
+          items: billItems.map((item) => ({
+            serviceId: item.serviceId,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        }),
+      });
+
+      if (apptRes.ok) {
+        const apptData = await apptRes.json();
+
+        await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appointmentId: apptData.id,
+            amount: totalAmount,
+            subtotal,
+            discount,
+            method: paymentMethod,
+            status: 'completed',
+            printReceipt: printPhysical,
+            whatsappStatus: sendWhatsApp && !isWalkInAnonymous ? 'sent' : 'not_requested',
+            notes: billNotes,
+            itemsJson: JSON.stringify(billItems),
+          }),
+        });
+
+        if (printPhysical) {
+          triggerThermalPrint();
+        }
+
+        if (sendWhatsApp && !isWalkInAnonymous) {
+          triggerWhatsAppBill();
+        }
+
+        setSuccessNotice(`Bill #${generatedBillNo} generated successfully!`);
+        setShowGenerateModal(false);
+        handleClearBill();
+        setTimeout(() => setSuccessNotice(null), 4000);
+      } else {
+        const err = await apptRes.json();
+        alert(err.error || 'Failed to create bill. Please check inputs.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error generating bill. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Notice Banner */}
+      {successNotice && (
+        <div
+          style={{
+            background: 'rgba(34, 197, 94, 0.15)',
+            border: '1px solid #22C55E',
+            color: '#4ADE80',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>✅</span>
+          <span style={{ fontWeight: 600 }}>{successNotice}</span>
+        </div>
+      )}
+
+      {/* POS Layout: Services Grid (Left) + Current Bill with Customer Search (Right) */}
+      <div className="pos-layout-grid">
+        {/* Left Column: Select Services */}
+        <div>
+          {/* Classic Two-Section Switcher: Men & Women */}
+          <div className="pos-gender-switch-container">
+            <button
+              type="button"
+              className={`pos-gender-switch-btn ${genderSection === 'men' ? 'active' : ''}`}
+              onClick={() => {
+                setGenderSection('men');
+                setSelectedCategory('All');
+              }}
+            >
+              <div className="pos-gender-switch-icon">🧔</div>
+              <div className="pos-gender-switch-text">
+                <span className="pos-gender-switch-title">MEN'S SALON</span>
+                <span className="pos-gender-switch-sub">Haircuts, Beard Grooming, Spa &amp; Facials</span>
+              </div>
+              <span className="pos-gender-count-badge">{menServices.length} Services</span>
+            </button>
+
+            <button
+              type="button"
+              className={`pos-gender-switch-btn ${genderSection === 'women' ? 'active' : ''}`}
+              onClick={() => {
+                setGenderSection('women');
+                setSelectedCategory('All');
+              }}
+            >
+              <div className="pos-gender-switch-icon">👩</div>
+              <div className="pos-gender-switch-text">
+                <span className="pos-gender-switch-title">WOMEN'S SALON</span>
+                <span className="pos-gender-switch-sub">Hair Styling, Clean Up, Waxing &amp; Treatments</span>
+              </div>
+              <span className="pos-gender-count-badge">{womenServices.length} Services</span>
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
+              {genderSection === 'men' ? "Men's Services Catalogue" : "Women's Services Catalogue"}
+            </h2>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              {filteredServices.length} services available
+            </span>
+          </div>
+
+          {/* Subcategory Tabs for Selected Gender */}
+          <div className="pos-category-tabs">
+            {currentCategories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`pos-tab-btn ${selectedCategory === cat ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Service Image Cards Grid - Distinct image for each service */}
+          <div className="pos-services-grid">
+            {filteredServices.map((service, idx) => {
+              const serviceImg = service.image || getServiceImage(service.name, idx);
+              return (
+                <div
+                  key={service.id}
+                  className="pos-service-card"
+                  onClick={() => handleAddService(service, idx)}
+                >
+                  <div className="pos-service-img-wrapper">
+                    <img
+                      src={serviceImg}
+                      alt={service.name}
+                      className="pos-service-img"
+                      loading="lazy"
+                    />
+                    <div className="pos-service-overlay"></div>
+                  </div>
+                  <div className="pos-service-info">
+                    <div className="pos-service-text">
+                      <div className="pos-service-name" title={service.name}>
+                        {service.name}
+                      </div>
+                      <div className="pos-service-price">₹{service.price}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="pos-service-add-btn"
+                      title={`Add ${service.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddService(service, idx);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right Column: Current Bill with Customer Lookup at the TOP */}
+        <div>
+          <div className="pos-current-bill-card">
+            {/* ── TOP OF CURRENT BILL: Customer Search Bar & Client Selection ── */}
+            <div className="pos-bill-client-header">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span className="pos-bill-title">Current Bill</span>
+                <button
+                  type="button"
+                  className="pos-bill-clear-btn"
+                  onClick={handleClearBill}
+                  title="Clear items in cart"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              {/* Customer Search Bar directly in Current Bill */}
+              <div style={{ position: 'relative', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#090B10',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                    borderRadius: '6px',
+                    padding: '0 10px',
+                  }}
+                >
+                  <span style={{ color: 'var(--text-muted)', marginRight: '6px', fontSize: '13px' }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search client by contact or name..."
+                    value={searchCustomer}
+                    onChange={(e) => {
+                      setSearchCustomer(e.target.value);
+                      setIsSearchingCustomer(true);
+                    }}
+                    onFocus={() => setIsSearchingCustomer(true)}
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#FFF',
+                      padding: '8px 0',
+                      fontSize: '12.5px',
+                      outline: 'none',
+                    }}
+                  />
+                  {searchCustomer && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchCustomer('');
+                        setIsSearchingCustomer(false);
+                      }}
+                      style={{ color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', padding: '2px' }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Autocomplete Dropdown */}
+                {isSearchingCustomer && searchCustomer.trim() && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: '#121723',
+                      border: '1px solid rgba(212, 175, 55, 0.3)',
+                      borderRadius: '6px',
+                      marginTop: '4px',
+                      zIndex: 60,
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.85)',
+                    }}
+                  >
+                    {filteredCustomers.length > 0 ? (
+                      filteredCustomers.map((c) => (
+                        <div
+                          key={c.id}
+                          onClick={() => handleSelectCustomer(c)}
+                          style={{
+                            padding: '8px 12px',
+                            borderBottom: '1px solid rgba(255,255,255,0.06)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, color: '#FFF', fontSize: '12.5px' }}>{c.name}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--gold-400)', fontVariantNumeric: 'tabular-nums' }}>
+                              📞 {c.phone}
+                            </div>
+                          </div>
+                          <span className={`pos-client-badge ${c.status || 'regular'}`}>
+                            {c.status || 'Select'}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '12px', fontSize: '11.5px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                        No client found. Click <b>+ New Client</b> to add by phone.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons: New Client (contact only) & Anonymous Walk-in */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => setShowNewClientModal(true)}
+                  style={{
+                    fontSize: '11.5px',
+                    padding: '5px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>➕</span>
+                  <span>New Client</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-outline btn-sm ${isWalkInAnonymous ? 'btn-active-gold' : ''}`}
+                  onClick={handleSetAnonymousWalkIn}
+                  title="Proceed without asking for customer details"
+                  style={{
+                    fontSize: '11.5px',
+                    padding: '5px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <span>🚶</span>
+                  <span>Walk-in / Skip Details</span>
+                </button>
+              </div>
+
+              {/* Active Client Pill */}
+              <div
+                style={{
+                  background: isWalkInAnonymous ? 'rgba(255, 255, 255, 0.04)' : 'rgba(212, 175, 55, 0.08)',
+                  border: isWalkInAnonymous
+                    ? '1px solid rgba(255, 255, 255, 0.1)'
+                    : '1px solid rgba(212, 175, 55, 0.25)',
+                  borderRadius: '6px',
+                  padding: '8px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <div
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      background: isWalkInAnonymous ? '#222734' : 'var(--gold-500)',
+                      color: isWalkInAnonymous ? '#AAA' : '#0A0D14',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isWalkInAnonymous ? '🚶' : selectedCustomer.name?.charAt(0).toUpperCase() || '👤'}
+                  </div>
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        color: '#FFF',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {isWalkInAnonymous ? 'Walk-in Guest (No Details)' : selectedCustomer.name}
+                    </div>
+                    {!isWalkInAnonymous && (
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--gold-400)',
+                          fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {selectedCustomer.phone}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <span
+                  style={{
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                    background: isWalkInAnonymous ? 'rgba(255,255,255,0.08)' : 'rgba(212, 175, 55, 0.2)',
+                    color: isWalkInAnonymous ? '#BBB' : 'var(--gold-400)',
+                  }}
+                >
+                  {isWalkInAnonymous ? 'ANONYMOUS' : selectedCustomer.status || 'CLIENT'}
+                </span>
+              </div>
+            </div>
+
+            {/* ── Bill Line Items (Clean, without cluttered staff dropdowns) ── */}
+            <div className="pos-bill-items-list">
+              {billItems.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  No services added.<br />Click on any service card on the left to add.
+                </div>
+              ) : (
+                billItems.map((item, idx) => (
+                  <div key={`${item.serviceId}-${idx}`} className="pos-bill-item-row-classic">
+                    {/* Item Thumbnail */}
+                    <img
+                      src={item.image || DISTINCT_IMAGE_POOL[idx % DISTINCT_IMAGE_POOL.length]}
+                      alt={item.name}
+                      className="pos-item-thumb-classic"
+                    />
+
+                    {/* Item Info (Clean, classic luxury layout) */}
+                    <div className="pos-item-info-classic">
+                      <div className="pos-item-name-classic" title={item.name}>
+                        {item.name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--gold-400)', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
+                        ₹{item.price} each
+                      </div>
+                    </div>
+
+                    {/* Quantity Stepper (Fixed-width centered alignment) */}
+                    <div className="pos-item-qty-classic">
+                      <button
+                        type="button"
+                        className="pos-qty-btn-classic"
+                        onClick={() => handleUpdateQty(idx, -1)}
+                        title="Decrease quantity"
+                      >
+                        -
+                      </button>
+                      <span className="pos-qty-num-classic">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        className="pos-qty-btn-classic"
+                        onClick={() => handleUpdateQty(idx, 1)}
+                        title="Increase quantity"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {/* Price & Remove (Fixed-width right aligned numbers) */}
+                    <div className="pos-item-price-col-classic">
+                      <span className="pos-item-amount-classic">
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </span>
+                      <button
+                        type="button"
+                        className="pos-item-del-btn-classic"
+                        onClick={() => handleRemoveItem(idx)}
+                        title="Remove service from bill"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* ── Numeric Summary Section (Perfect Tabular Alignment) ── */}
+            <div className="pos-bill-summary-box-classic">
+              <div className="pos-summary-line-classic">
+                <span>Subtotal</span>
+                <span className="pos-num-aligned">₹{subtotal.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="pos-summary-line-classic">
+                <span>Discount</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    value={discount || ''}
+                    placeholder="0"
+                    onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                    className="pos-discount-input"
+                  />
+                </div>
+              </div>
+              <div className="pos-summary-total-classic">
+                <span>Total</span>
+                <span className="pos-total-aligned">₹{totalAmount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="pos-payment-selector">
+              <div className="pos-payment-title">Payment Method</div>
+              <div className="pos-payment-radios">
+                {(['cash', 'upi', 'card', 'other'] as const).map((method) => (
+                  <label
+                    key={method}
+                    className={`pos-payment-radio-label ${paymentMethod === method ? 'selected' : ''}`}
+                    onClick={() => setPaymentMethod(method)}
+                  >
+                    <input
+                      type="radio"
+                      name="posPaymentMethod"
+                      checked={paymentMethod === method}
+                      onChange={() => setPaymentMethod(method)}
+                      style={{ accentColor: 'var(--gold-400)' }}
+                    />
+                    <span style={{ textTransform: 'capitalize' }}>{method === 'upi' ? 'UPI' : method}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Generate Bill Button */}
+            <button
+              type="button"
+              className="pos-btn-generate"
+              disabled={billItems.length === 0}
+              onClick={handleOpenGenerateBill}
+            >
+              Generate Bill
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          GENERATE BILL MODAL
+         ═══════════════════════════════════════════════════════════════ */}
+      {showGenerateModal && (
+        <div className="thermal-modal-backdrop">
+          <div className="thermal-modal-card">
+            <div className="thermal-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowGenerateModal(false)}
+                  style={{ fontSize: '18px', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  ←
+                </button>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
+                    Generate Bill
+                  </h3>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Review bill details and choose how to share/print.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowGenerateModal(false)}
+                style={{ color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="thermal-modal-body">
+              {/* Left Column: 58mm Thermal Receipt Preview */}
+              <div>
+                <div ref={receiptRef} className="thermal-receipt-paper printable-receipt">
+                  <div className="thermal-receipt-header">
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '6px' }}>
+                      <Logo size="sm" showText={false} />
+                    </div>
+                    <div className="thermal-receipt-logo-title" style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', fontWeight: 900, letterSpacing: '0.04em' }}>
+                      HAIR MART STUDIO
+                    </div>
+                    <div className="thermal-receipt-subtitle" style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.12em', color: '#333' }}>
+                      UNISEX FAMILY SALON
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#555', marginTop: '2px' }}>Surathkal, Mangalore • Ph: 0824-4060938</div>
+                  </div>
+
+                  <div className="thermal-receipt-meta">
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Bill No: <b>{generatedBillNo}</b></span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Date: {generatedDate}</span>
+                      <span>Time: {generatedTime}</span>
+                    </div>
+                    <div style={{ marginTop: '4px' }}>
+                      Customer: <b>{isWalkInAnonymous ? 'Walk-in Guest' : selectedCustomer.name}</b>
+                    </div>
+                    {!isWalkInAnonymous && selectedCustomer.phone !== 'Not Provided' && (
+                      <div>Phone: {selectedCustomer.phone}</div>
+                    )}
+                  </div>
+
+                  <table className="thermal-receipt-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '55%' }}>Service</th>
+                        <th style={{ width: '15%', textAlign: 'center' }}>Qty</th>
+                        <th style={{ width: '30%', textAlign: 'right' }}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {billItems.map((item, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 600 }}>{item.name}</td>
+                          <td style={{ textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                          <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  <div className="thermal-receipt-totals">
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Subtotal:</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{subtotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Discount:</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>-₹{discount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="thermal-receipt-grand-total">
+                      <span>Total Amount</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>₹{totalAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
+                      Payment: {paymentMethod.toUpperCase()} (Recorded)
+                    </div>
+                  </div>
+
+                  <div className="thermal-receipt-footer">
+                    <div>Thank you for visiting HairMart!</div>
+                    <div style={{ fontWeight: 400, marginTop: '2px' }}>Keep looking good, always.</div>
+                  </div>
+                </div>
+
+                {/* Quick actions directly below receipt */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '14px', maxWidth: '320px', margin: '14px auto 0' }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ flex: 1, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={triggerThermalPrint}
+                  >
+                    <span>🖨️</span>
+                    <span>Print Bill</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    style={{ flex: 1, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    onClick={triggerWhatsAppBill}
+                    disabled={isWalkInAnonymous}
+                  >
+                    <span>💬</span>
+                    <span>Send WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Independent Bill Options & Printer Hardware */}
+              <div>
+                <h4 style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gold-400)', marginBottom: '12px' }}>
+                  Bill Options
+                </h4>
+
+                {/* Toggle 1: WhatsApp Bill */}
+                <div className="toggle-switch-card">
+                  <div>
+                    <div className="toggle-switch-title">Send WhatsApp Bill</div>
+                    <div className="toggle-switch-desc">
+                      {isWalkInAnonymous
+                        ? 'Disabled: Walk-in guest without contact details'
+                        : sendWhatsApp
+                        ? `Customer will receive bill on WhatsApp (${selectedCustomer.phone})`
+                        : 'WhatsApp sending disabled (Consent required)'}
+                    </div>
+                  </div>
+                  <div
+                    className={`switch-pill ${sendWhatsApp && !isWalkInAnonymous ? 'active' : ''}`}
+                    onClick={() => {
+                      if (!isWalkInAnonymous) setSendWhatsApp(!sendWhatsApp);
+                    }}
+                    style={{ opacity: isWalkInAnonymous ? 0.4 : 1, cursor: isWalkInAnonymous ? 'not-allowed' : 'pointer' }}
+                  >
+                    <div className="switch-handle"></div>
+                  </div>
+                </div>
+
+                {/* Toggle 2: Physical Thermal Print */}
+                <div className="toggle-switch-card">
+                  <div>
+                    <div className="toggle-switch-title">Print Physical Bill</div>
+                    <div className="toggle-switch-desc">
+                      Print using portable billing machine (EZO 58mm)
+                    </div>
+                  </div>
+                  <div
+                    className={`switch-pill ${printPhysical ? 'active' : ''}`}
+                    onClick={() => setPrintPhysical(!printPhysical)}
+                  >
+                    <div className="switch-handle"></div>
+                  </div>
+                </div>
+
+                {/* EZO 58mm Thermal Printer Hardware Card */}
+                <h4 style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--gold-400)', marginTop: '20px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>EZO 58mm Printer Machine</span>
+                  <span style={{ fontSize: '10px', textTransform: 'none', color: 'var(--text-muted)' }}>58mm Roll / ESC-POS</span>
+                </h4>
+
+                <div
+                  style={{
+                    background: '#0D111A',
+                    border: '1px solid rgba(246, 201, 38, 0.25)',
+                    borderRadius: '10px',
+                    padding: '14px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          background: 'rgba(246, 201, 38, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',
+                        }}
+                      >
+                        🖨️
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#FFF' }}>
+                          {printerDeviceName}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: printerStatus !== 'ready' ? '#4ADE80' : 'var(--gold-400)', marginTop: '2px' }}>
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: printerStatus !== 'ready' ? '#22C55E' : 'var(--gold-400)',
+                              display: 'inline-block',
+                            }}
+                          />
+                          <span>
+                            {printerStatus === 'bluetooth'
+                              ? 'Wireless Bluetooth Connected'
+                              : printerStatus === 'serial'
+                              ? 'USB Serial Port Connected'
+                              : 'Ready (Direct 58mm Roll Driver)'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: '11px', padding: '5px 10px', color: 'var(--gold-400)', borderColor: 'rgba(246, 201, 38, 0.4)' }}
+                      onClick={handleTestPrint}
+                    >
+                      ⚡ Test Print
+                    </button>
+                  </div>
+
+                  {/* Connect Buttons */}
+                  <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    <button
+                      type="button"
+                      disabled={connectingPrinter}
+                      onClick={handleConnectBluetooth}
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        flex: 1,
+                        fontSize: '11px',
+                        padding: '6px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: printerStatus === 'bluetooth' ? 'rgba(34,197,94,0.1)' : 'transparent',
+                        borderColor: printerStatus === 'bluetooth' ? '#22C55E' : 'rgba(255,255,255,0.15)',
+                      }}
+                    >
+                      <span>📶</span>
+                      <span>{connectingPrinter ? 'Pairing...' : 'Pair Bluetooth'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={connectingPrinter}
+                      onClick={handleConnectUSB}
+                      className="btn btn-outline btn-sm"
+                      style={{
+                        flex: 1,
+                        fontSize: '11px',
+                        padding: '6px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        background: printerStatus === 'serial' ? 'rgba(34,197,94,0.1)' : 'transparent',
+                        borderColor: printerStatus === 'serial' ? '#22C55E' : 'rgba(255,255,255,0.15)',
+                      }}
+                    >
+                      <span>🔌</span>
+                      <span>USB Cable</span>
+                    </button>
+                  </div>
+
+                  {printerNotice && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--gold-300)', textAlign: 'center' }}>
+                      ℹ️ {printerNotice}
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes (Optional) */}
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Add any notes..."
+                    value={billNotes}
+                    onChange={(e) => setBillNotes(e.target.value)}
+                    style={{ width: '100%', background: '#111520', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', color: '#FFF', padding: '10px', fontSize: '13px', resize: 'none' }}
+                  />
+                </div>
+
+                {/* Primary Action Button */}
+                <div style={{ marginTop: '24px' }}>
+                  <button
+                    type="button"
+                    className="pos-btn-generate"
+                    disabled={isProcessing}
+                    onClick={handleCompleteBill}
+                    style={{ padding: '14px', fontSize: '15px' }}
+                  >
+                    {isProcessing ? 'Processing...' : 'Complete & Close'}
+                  </button>
+
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
+                    {printPhysical && sendWhatsApp && !isWalkInAnonymous
+                      ? 'Print receipt AND send WhatsApp bill'
+                      : printPhysical
+                      ? 'Print receipt only (No WhatsApp)'
+                      : sendWhatsApp && !isWalkInAnonymous
+                      ? 'Send WhatsApp only (No physical print)'
+                      : 'Store digital bill in system'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          NEW CLIENT MODAL (Contact number is enough; name optional)
+         ═══════════════════════════════════════════════════════════════ */}
+      {showNewClientModal && (
+        <div className="thermal-modal-backdrop">
+          <div style={{ background: '#0E121B', border: '1px solid rgba(212, 175, 55, 0.3)', borderRadius: '12px', width: '100%', maxWidth: '420px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFF', margin: 0 }}>
+                  + New Client for Billing
+                </h3>
+                <div style={{ fontSize: '11.5px', color: 'var(--gold-400)', marginTop: '2px' }}>
+                  Contact number is enough to proceed
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewClientModal(false)}
+                style={{ color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewClient}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: '#FFF', fontWeight: 600, marginBottom: '4px' }}>
+                  Contact Number * <span style={{ fontSize: '11px', color: 'var(--gold-400)' }}>(Required)</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  autoFocus
+                  placeholder="e.g. 9876543210"
+                  value={newClientForm.phone}
+                  onChange={(e) => setNewClientForm({ ...newClientForm, phone: e.target.value, whatsapp: e.target.value })}
+                  style={{
+                    width: '100%',
+                    background: '#121723',
+                    border: '1px solid rgba(212, 175, 55, 0.4)',
+                    borderRadius: '6px',
+                    color: '#FFF',
+                    padding: '11px 12px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Customer Name <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Optional (e.g. Rahul)"
+                  value={newClientForm.name}
+                  onChange={(e) => setNewClientForm({ ...newClientForm, name: e.target.value })}
+                  style={{ width: '100%', background: '#121723', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#FFF', padding: '10px 12px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                  Client Notes <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Preferences, skin sensitivity, etc."
+                  value={newClientForm.notes}
+                  onChange={(e) => setNewClientForm({ ...newClientForm, notes: e.target.value })}
+                  style={{ width: '100%', background: '#121723', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#FFF', padding: '10px 12px', fontSize: '13px', resize: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setShowNewClientModal(false)}
+                  style={{ flex: 1 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, fontWeight: 700 }}
+                >
+                  Save &amp; Select
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
