@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hair Mart Studio</string>
+    <string name="title_activity_main">Hair Mart Studio</string>
+    <string name="package_name">com.hairmart.salon</string>
+    <string name="custom_url_scheme">com.hairmart.salon</string>
+</resources>
