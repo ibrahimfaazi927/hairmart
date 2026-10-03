@@ -19,7 +19,13 @@ async function main() {
   await prisma.salonSetting.deleteMany({});
 
   // 2. Create Default Admin
-  const hashedPassword = await bcrypt.hash('Sameer@123', 10);
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+if (!adminPassword) {
+  throw new Error('SEED_ADMIN_PASSWORD is required');
+}
+
+const hashedPassword = await bcrypt.hash(adminPassword, 10);
   await prisma.user.create({
     data: {
       name: 'Sameer',
@@ -29,7 +35,7 @@ async function main() {
       active: true,
     },
   });
-  console.log('Admin user created (ID: Sameer, Pass: Sameer@123)');
+  console.log('Admin user created (ID: Sameer)');
 
   // 3. Create Service Categories
   const catWomenHairSpa = await prisma.serviceCategory.create({

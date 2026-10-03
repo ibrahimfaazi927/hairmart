@@ -757,11 +757,88 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--gold-300);
 }
 
+.hero-italic {
+  font-style: italic;
+}
+
+/* By default, mobile-only title is hidden and desktop title is shown */
+.hero-mobile-title {
+  display: none;
+}
+.hero-desktop-title {
+  display: block;
+}
+.hero-directions-desktop {
+  margin-top: 10px;
+}
+
 .hero-actions {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+/* ─── Hero CTA Buttons (Pill Style matching reference) ─── */
+.btn-hero-whatsapp {
+  background: rgba(37, 211, 102, 0.15);
+  color: #FFFFFF;
+  font-weight: 600;
+  border: 1.5px solid rgba(37, 211, 102, 0.5);
+  border-radius: var(--radius-full);
+  padding: 10px 22px;
+  gap: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+}
+
+.btn-hero-whatsapp:hover {
+  background: #25D366;
+  border-color: #25D366;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
+}
+
+.btn-hero-whatsapp svg:first-child {
+  color: #25D366;
+}
+
+.btn-hero-whatsapp:hover svg:first-child {
+  color: #FFFFFF;
+}
+
+.hero-btn-arrow {
+  opacity: 0.7;
+  margin-left: 2px;
+}
+
+.btn-hero-call {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  font-weight: 600;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-full);
+  padding: 10px 22px;
+  gap: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+}
+
+.btn-hero-call:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-hero-call svg {
+  color: var(--gold-400);
+}
+
+/* ─── Hero Bottom Service Categories Strip ─── */
+.hero-services-strip {
+  display: none; /* Hidden on desktop by default */
 }
 
 .hero-scroll-indicator {
@@ -1339,29 +1416,41 @@ h1, h2, h3, h4, h5, h6 {
   .heading-lg { font-size: 1.6rem; }
   .heading-md { font-size: 1.3rem; }
 
-  /* ─── MOBILE HERO — Classical Luxury Centered Composition ─ */
+  /* ═══ MOBILE HERO — Matching Reference Design Exactly ═══ */
   .hero-split {
     flex-direction: column !important;
     min-height: calc(100svh - 58px) !important;
     min-height: calc(100vh - 58px) !important;
     position: relative !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Show mobile title, hide desktop title */
+  .hero-mobile-title {
+    display: block !important;
+  }
+  .hero-desktop-title {
+    display: none !important;
+  }
+  .hero-directions-desktop {
+    display: none !important;
   }
 
   .hero-split-text {
     flex: none !important;
     max-width: 100% !important;
     width: 100% !important;
-    padding: var(--space-8) var(--space-5) !important;
+    padding: 0 24px !important;
     background: transparent !important;
     position: relative !important;
     z-index: 3 !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
+    align-items: flex-start !important;
+    justify-content: flex-end !important;
+    text-align: left !important;
+    margin-bottom: 14px !important;
   }
 
   .hero-split-text::after {
@@ -1369,100 +1458,133 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .hero-split-text-inner {
-    max-width: 480px !important;
-    margin: 0 auto !important;
+    max-width: 100% !important;
+    margin: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
+    align-items: flex-start !important;
+    text-align: left !important;
   }
 
-  /* Classical Subtitle Badge */
-  .section-subtitle {
-    font-size: 10px !important;
-    letter-spacing: 0.18em !important;
-    padding: 4px 14px !important;
-    background: rgba(12, 14, 18, 0.75) !important;
-    border: 1px solid rgba(212, 175, 55, 0.4) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    margin-bottom: 12px !important;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4) !important;
-  }
-
-  /* Grand Serif Title */
-  .hero-split-title {
-    font-size: 2.5rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
-    line-height: 1.1 !important;
-    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.8) !important;
-    margin-bottom: 6px !important;
-  }
-
-  /* Elegant Gold Subheading */
-  .hero-location {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.16em !important;
-    margin-bottom: 14px !important;
-    color: var(--gold-300) !important;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8) !important;
+  /* ── Subtitle: plain uppercase tracking text, no badge ── */
+  .hero-subtitle {
+    font-family: var(--font-sans) !important;
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.22em !important;
     text-transform: uppercase !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    margin-bottom: 16px !important;
+    box-shadow: none !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    border-radius: 0 !important;
   }
 
-  /* Refined Description */
+  /* ── Title: "Look Good," (sans) + "Feel Better" (serif italic gold) ── */
+  .hero-split-title {
+    font-family: var(--font-sans) !important;
+    font-size: clamp(2.4rem, 9vw, 3rem) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.015em !important;
+    line-height: 1.1 !important;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, 0.85) !important;
+    margin-bottom: 18px !important;
+    color: #FFFFFF !important;
+  }
+
+  .hero-italic {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-style: italic !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  /* ── Subheading hidden on mobile ── */
+  .hero-location {
+    display: none !important;
+  }
+
+  /* ── Description paragraph ── */
   .hero-split-desc {
+    font-family: var(--font-sans) !important;
     font-size: 13.5px !important;
+    font-weight: 400 !important;
     line-height: 1.6 !important;
-    margin-bottom: 22px !important;
+    margin-bottom: 24px !important;
     max-width: 360px !important;
-    color: rgba(230, 235, 245, 0.92) !important;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85) !important;
+    color: rgba(200, 205, 215, 0.82) !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7) !important;
   }
 
-  /* Luxury Action Buttons on Mobile */
+  /* ══ Mobile Hero Pill Buttons — matching reference exactly ══ */
   .hero-actions {
     display: flex !important;
     flex-direction: row !important;
-    justify-content: center !important;
-    gap: 8px !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 12px !important;
     width: 100% !important;
     max-width: 380px !important;
+    flex-wrap: nowrap !important;
   }
 
-  .hero-actions .btn {
-    flex: 1 !important;
-    justify-content: center !important;
-    padding: 11px 10px !important;
-    font-size: 12.5px !important;
+  /* WhatsApp pill: dark bg, green icon, arrow */
+  .hero-actions .btn-hero-whatsapp {
+    background: rgba(20, 24, 32, 0.75) !important;
+    color: #FFFFFF !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 999px !important;
+    padding: 13px 24px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
-    border-radius: 6px !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
-    transition: all 0.2s ease !important;
+    gap: 10px !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+    flex: none !important;
+    height: auto !important;
+    letter-spacing: 0.01em !important;
   }
 
-  .hero-actions .btn-whatsapp {
-    background: #25D366 !important;
+  .hero-actions .btn-hero-whatsapp svg:first-child {
+    color: #25D366 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .hero-btn-arrow {
+    display: inline-block !important;
+    opacity: 0.5 !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Call pill: dark bg, gold phone icon */
+  .hero-actions .btn-hero-call {
+    background: rgba(20, 24, 32, 0.75) !important;
     color: #FFFFFF !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 999px !important;
+    padding: 13px 24px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    gap: 10px !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+    flex: none !important;
+    height: auto !important;
+    letter-spacing: 0.01em !important;
   }
 
-  .hero-actions .btn-navy {
-    background: rgba(18, 21, 28, 0.85) !important;
-    color: #FFFFFF !important;
-    border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  .hero-actions .btn-hero-call svg {
+    color: var(--gold-400) !important;
+    flex-shrink: 0 !important;
   }
 
-  .hero-actions .btn-secondary {
-    background: rgba(18, 21, 28, 0.85) !important;
-    color: var(--gold-300) !important;
-    border: 1px solid rgba(212, 175, 55, 0.3) !important;
-  }
-
-  /* Image: full-bleed atmospheric background */
+  /* ── Full-bleed salon background image ── */
   .hero-split-image {
     position: absolute !important;
     inset: 0 !important;
@@ -1472,19 +1594,76 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .hero-split-image img {
-    object-position: center 30% !important;
+    object-position: center 25% !important;
   }
 
-  /* Atmospheric dark vignette: deep center overlay for absolute text clarity while revealing the salon warm lighting */
+  /* Gradient: lighter top (see salon), darker bottom (text area) */
   .hero-split-image::before {
     background:
-      radial-gradient(ellipse at center, rgba(12, 14, 18, 0.72) 0%, rgba(12, 14, 18, 0.88) 65%, var(--dark-950) 100%),
-      linear-gradient(180deg, rgba(12, 14, 18, 0.5) 0%, transparent 20%, transparent 80%, var(--dark-950) 100%) !important;
+      linear-gradient(180deg,
+        rgba(12, 14, 18, 0.15) 0%,
+        rgba(12, 14, 18, 0.2) 15%,
+        rgba(12, 14, 18, 0.35) 35%,
+        rgba(12, 14, 18, 0.65) 55%,
+        rgba(12, 14, 18, 0.88) 75%,
+        var(--dark-950) 100%
+      ) !important;
     z-index: 1 !important;
   }
 
   .hero-scroll-indicator {
     display: none !important;
+  }
+
+  /* ══ Mobile Hero Services Strip — Bottom Bar ══ */
+  .hero-services-strip {
+    display: flex !important;
+    position: relative !important;
+    z-index: 4 !important;
+    justify-content: space-evenly !important;
+    align-items: flex-start !important;
+    padding: 18px 8px 22px !important;
+    background: linear-gradient(180deg, rgba(12, 14, 18, 0.96) 0%, rgba(9, 11, 14, 1) 100%) !important;
+    backdrop-filter: none !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.12) !important;
+    gap: 0 !important;
+    width: 100% !important;
+  }
+
+  .hero-service-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    text-decoration: none !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 0 2px !important;
+  }
+
+  .hero-service-icon {
+    color: var(--gold-400) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .hero-service-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .hero-service-label {
+    font-family: var(--font-sans) !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    text-align: center !important;
+    line-height: 1.35 !important;
+    white-space: pre-line !important;
+    letter-spacing: 0.01em !important;
   }
 
   /* 2 Horizontal Columns for Services on Phone */
@@ -1535,28 +1714,14 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 10.5px !important;
   }
 
-  /* Compact Hero & Header Buttons on Mobile */
-  .hero-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 6px !important;
-    width: 100% !important;
-  }
-
-  .hero-actions .btn,
+  /* Compact Header Buttons on Mobile (non-hero contexts) */
   .btn-xl,
   .btn-lg {
-    flex: 1 !important;
     padding: 7px 10px !important;
     font-size: 11.5px !important;
     border-radius: 6px !important;
     height: 36px !important;
     white-space: nowrap !important;
-  }
-
-  .hero-actions .btn svg {
-    width: 14px !important;
-    height: 14px !important;
   }
 
   /* Chatbot on Mobile */
