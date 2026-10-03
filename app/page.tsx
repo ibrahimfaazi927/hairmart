@@ -184,15 +184,12 @@ export default function Home() {
                 </svg>
                 Call
               </a>
-            </div>
-
-            {/* Desktop-only directions link */}
-            <div className="hero-directions-desktop hero-animate hero-animate-5">
               <a
                 href={MAPS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary btn-md"
+                className="btn btn-hero-call btn-md hero-directions-desktop"
+                id="hero-directions-btn"
               >
                 📍 Directions
               </a>

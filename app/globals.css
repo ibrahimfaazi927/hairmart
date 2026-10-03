@@ -769,7 +769,7 @@ h1, h2, h3, h4, h5, h6 {
   display: block;
 }
 .hero-directions-desktop {
-  margin-top: 10px;
+  /* no extra margin — it's inline with other buttons now */
 }
 
 .hero-actions {
@@ -780,17 +780,32 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ─── Hero CTA Buttons (Pill Style matching reference) ─── */
-.btn-hero-whatsapp {
-  background: rgba(37, 211, 102, 0.15);
-  color: #FFFFFF;
+.btn-hero-whatsapp,
+.btn-hero-call {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 600;
-  border: 1.5px solid rgba(37, 211, 102, 0.5);
   border-radius: var(--radius-full);
-  padding: 10px 22px;
+  padding: 11px 22px;
   gap: 8px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all 0.25s ease;
+  height: 44px;
+  box-sizing: border-box;
+}
+
+.btn-hero-whatsapp {
+  background: rgba(37, 211, 102, 0.15);
+  color: #FFFFFF;
+  border: 1.5px solid rgba(37, 211, 102, 0.5);
+}
+
+.btn-hero-call {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
 }
 
 .btn-hero-whatsapp:hover {
@@ -811,19 +826,6 @@ h1, h2, h3, h4, h5, h6 {
 .hero-btn-arrow {
   opacity: 0.7;
   margin-left: 2px;
-}
-
-.btn-hero-call {
-  background: rgba(255, 255, 255, 0.08);
-  color: #FFFFFF;
-  font-weight: 600;
-  border: 1.5px solid rgba(255, 255, 255, 0.25);
-  border-radius: var(--radius-full);
-  padding: 10px 22px;
-  gap: 8px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.25s ease;
 }
 
 .btn-hero-call:hover {
