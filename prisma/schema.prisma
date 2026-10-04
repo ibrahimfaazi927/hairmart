@@ -40,20 +40,74 @@ model Customer {
   invoices      Invoice[]
 }
 
+// ─── Chair Management ─────────────────────────────────────
+model Chair {
+  id            String    @id @default(cuid())
+  name          String    // e.g. "Chair 1", "Chair 2", etc.
+  section       String    // "men" | "women"
+  sortOrder     Int       @default(0)
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  assignedStaff Staff?
+  appointments  Appointment[]
+}
+
 // ─── Staff Management ─────────────────────────────────────
 model Staff {
   id            String    @id @default(cuid())
   name          String
-  role          String    // Hair Stylist | Barber | Beautician | Spa Therapist | Receptionist | Senior Stylist
   phone         String?
-  avatar        String?
-  status        String    @default("active") // active | inactive
+  gender        String?   // male | female | other
+  role          String    // Hair Stylist | Barber | Beautician | Spa Therapist | Receptionist | Senior Stylist
+  section       String?   // men | women | unisex
+  chairId       String?   @unique
   joiningDate   DateTime? @default(now())
+  status        String    @default("active")  // active | inactive
+  notes         String?
+  avatar        String?
   specialties   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  chair               Chair?                @relation(fields: [chairId], references: [id])
+  attendances         StaffAttendance[]
+  leaves              StaffLeave[]
   appointmentServices AppointmentService[]
+}
+
+// ─── Staff Attendance ─────────────────────────────────────
+model StaffAttendance {
+  id            String    @id @default(cuid())
+  staffId       String
+  date          DateTime  // Date of attendance (day, normalized UTC 00:00:00)
+  checkIn       String?   // e.g. "09:05 AM"
+  checkOut      String?   // e.g. "07:10 PM"
+  duration      String?   // e.g. "8 hrs 15 mins"
+  status        String    @default("Present") // Present | Absent | Half Day | Leave | Holiday
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  staff         Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+}
+
+// ─── Staff Leave ──────────────────────────────────────────
+model StaffLeave {
+  id            String    @id @default(cuid())
+  staffId       String
+  startDate     DateTime
+  endDate       DateTime
+  leaveType     String    @default("Casual") // Casual | Sick | Paid | Unpaid | Emergency
+  status        String    @default("approved") // approved | pending | rejected
+  reason        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  staff         Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
 }
 
 // ─── Service Categories ────────────────────────────────────
@@ -164,10 +218,14 @@ model Appointment {
   status          String    @default("pending") // pending | confirmed | completed | cancelled | no_show
   packageId       String?
   totalAmount     Float     @default(0)
+  chairId         String?
+  chairName       String?   // Snapshot: "Chair 1", "Chair 2", etc.
+  section         String?   // Snapshot: "men" | "women"
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   customer        Customer? @relation(fields: [customerId], references: [id])
+  chair           Chair?    @relation(fields: [chairId], references: [id])
   package         Package?  @relation(fields: [packageId], references: [id])
   services        AppointmentService[]
   products        AppointmentProduct[]
@@ -241,6 +299,8 @@ model Invoice {
   status          String    @default("draft") // draft | sent | paid
   notes           String?
   paymentMethod   String?   @default("cash") // cash | upi | card | other
+  chairName       String?
+  section         String?
   printReceipt    Boolean   @default(false)
   whatsappStatus  String    @default("not_requested") // not_requested | pending | sent | failed
   itemsJson       String?   // JSON snapshot of billed items with staff attribution for instant receipt generation

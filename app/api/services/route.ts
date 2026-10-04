@@ -50,6 +50,7 @@ export async function POST(request: Request) {
       price,
       priceVisible,
       categoryId,
+      image,
       productIds,
     } = body;
 
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
         price: price ? parseFloat(price) : 0,
         priceVisible: !!priceVisible,
         categoryId,
+        image: image || null,
       },
     });
 

@@ -18,7 +18,7 @@ interface ServiceItem {
   price: number;
   duration?: number;
   image?: string;
-  category?: { name: string; gender?: string };
+  category?: { id?: string; name: string; gender?: string };
   categoryName?: string;
 }
 
@@ -40,6 +40,26 @@ interface BillItem {
   price: number;
   quantity: number;
   image?: string;
+}
+
+interface ChairOption {
+  id: string;
+  name: string;
+  section: string;
+  active: boolean;
+  assignedStaff?: { name: string } | null;
+}
+
+interface ProductItem {
+  id: string;
+  name: string;
+  brand: string;
+  description?: string | null;
+  image?: string | null;
+  price: number;
+  stock?: number | null;
+  category?: string | null;
+  active: boolean;
 }
 
 // ── Curated high-definition distinct salon photography ─────────────
@@ -170,21 +190,30 @@ const WOMEN_CATEGORIES = [
 
 export default function AdminBillingPOSPage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [genderSection, setGenderSection] = useState<'men' | 'women'>('men');
+  const [posSection, setPosSection] = useState<'men' | 'women'>('men');
+
+  // Service Management Modal state
+  const [showServiceManager, setShowServiceManager] = useState(false);
+  const [serviceCategories, setServiceCategories] = useState<Array<{id: string; name: string; gender?: string}>>([]);
+  const [editingService, setEditingService] = useState<ServiceItem | null>(null);
+  const [serviceFormMode, setServiceFormMode] = useState<'list' | 'add' | 'edit'>('list');
+  const [serviceForm, setServiceForm] = useState({ name: '', price: '', duration: '', categoryId: '', description: '' });
+  const [savingService, setSavingService] = useState(false);
+  const [serviceManagerFilter, setServiceManagerFilter] = useState<'all' | 'men' | 'women'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchCustomer, setSearchCustomer] = useState('');
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
 
   // Selected customer & anonymous walk-in flag
-  const [isWalkInAnonymous, setIsWalkInAnonymous] = useState(false);
+  const [isWalkInAnonymous, setIsWalkInAnonymous] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>({
-    id: 'walkin-default',
-    name: 'Rahul Nair',
-    phone: '+91 98765 43210',
-    status: 'regular',
-    lastVisit: '10 Jun 2025',
-    totalSpent: 2400,
+    id: 'walkin-anonymous',
+    name: 'Walk-in Guest',
+    phone: 'Not Provided',
+    status: 'walk-in',
+    lastVisit: 'Today',
+    totalSpent: 0,
   });
 
   // Current Cart / Bill - start clean for POS operations
@@ -192,6 +221,10 @@ export default function AdminBillingPOSPage() {
 
   const [discount, setDiscount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'other'>('cash');
+
+  // Chair selection state
+  const [chairs, setChairs] = useState<ChairOption[]>([]);
+  const [selectedChairId, setSelectedChairId] = useState<string | null>(null);
 
   // Generate Bill Modal state
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -225,15 +258,17 @@ export default function AdminBillingPOSPage() {
 
   const loadInitialData = async () => {
     try {
-      const [srvRes, custRes] = await Promise.all([
+      const [srvRes, custRes, chairRes] = await Promise.all([
         fetch('/api/services'),
         fetch('/api/customers'),
+        fetch('/api/chairs'),
       ]);
 
       if (srvRes.ok) {
         const srvData = await srvRes.json();
         const loadedServices: ServiceItem[] = srvData.services || [];
         setServices(loadedServices);
+        if (srvData.categories) setServiceCategories(srvData.categories);
       }
 
       if (custRes.ok) {
@@ -243,8 +278,101 @@ export default function AdminBillingPOSPage() {
           setSelectedCustomer(custData[0]);
         }
       }
+
+      if (chairRes.ok) {
+        const chairData = await chairRes.json();
+        setChairs(chairData.filter((c: ChairOption) => c.active));
+      }
     } catch (err) {
       console.error('Failed to load POS data:', err);
+    }
+  };
+
+  // ── Service Management CRUD ──
+  const handleOpenServiceManager = () => {
+    setServiceFormMode('list');
+    setEditingService(null);
+    setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '' });
+    setShowServiceManager(true);
+  };
+
+  const handleStartAddService = () => {
+    setEditingService(null);
+    setServiceForm({ name: '', price: '', duration: '', categoryId: serviceCategories[0]?.id || '', description: '' });
+    setServiceFormMode('add');
+  };
+
+  const handleStartEditService = (s: ServiceItem) => {
+    setEditingService(s);
+    setServiceForm({
+      name: s.name,
+      price: String(s.price || 0),
+      duration: String(s.duration || ''),
+      categoryId: s.category?.id || (s as any).categoryId || '',
+      description: (s as any).description || '',
+    });
+    setServiceFormMode('edit');
+  };
+
+  const handleSaveService = async () => {
+    if (!serviceForm.name.trim() || !serviceForm.categoryId) {
+      alert('Service name and category are required.');
+      return;
+    }
+    setSavingService(true);
+    try {
+      const payload = {
+        name: serviceForm.name.trim(),
+        price: serviceForm.price,
+        duration: serviceForm.duration || null,
+        categoryId: serviceForm.categoryId,
+        description: serviceForm.description || null,
+      };
+
+      if (serviceFormMode === 'edit' && editingService) {
+        await fetch(`/api/services/${editingService.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetch('/api/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      // Refresh services
+      const res = await fetch('/api/services');
+      if (res.ok) {
+        const data = await res.json();
+        setServices(data.services || []);
+        if (data.categories) setServiceCategories(data.categories);
+      }
+      setServiceFormMode('list');
+      setEditingService(null);
+      setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save service.');
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    if (!confirm('Are you sure you want to delete this service? This cannot be undone.')) return;
+    try {
+      await fetch(`/api/services/${serviceId}`, { method: 'DELETE' });
+      const res = await fetch('/api/services');
+      if (res.ok) {
+        const data = await res.json();
+        setServices(data.services || []);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete service.');
     }
   };
 
@@ -294,6 +422,7 @@ export default function AdminBillingPOSPage() {
   const handleClearBill = () => {
     setBillItems([]);
     setDiscount(0);
+    setSelectedChairId(null);
   };
 
   // Calculations with precise numbers
@@ -349,8 +478,9 @@ export default function AdminBillingPOSPage() {
 
   const menServices = services.filter(isMenService);
   const womenServices = services.filter(isWomenService);
-  const activeSectionServices = genderSection === 'men' ? menServices : womenServices;
-  const currentCategories = genderSection === 'men' ? MEN_CATEGORIES : WOMEN_CATEGORIES;
+  const activeSectionServices = posSection === 'men' ? menServices : womenServices;
+
+  const currentCategories = posSection === 'men' ? MEN_CATEGORIES : WOMEN_CATEGORIES;
 
   // Filtered services
   const filteredServices = activeSectionServices.filter((s) => {
@@ -358,7 +488,7 @@ export default function AdminBillingPOSPage() {
     const name = s.name.toLowerCase();
     const cat = (s.category?.name || s.categoryName || '').toLowerCase();
 
-    if (genderSection === 'men') {
+    if (posSection === 'men') {
       if (selectedCategory === 'Hair Cut & Shave')
         return name.includes('cut') || name.includes('shav') || name.includes('hair') || cat.includes('cut');
       if (selectedCategory === 'Beard Grooming')
@@ -369,7 +499,7 @@ export default function AdminBillingPOSPage() {
         return name.includes('spa') || name.includes('massag') || name.includes('dandruff') || name.includes('fall');
       if (selectedCategory === 'Hair Color')
         return name.includes('color') || name.includes('colour') || name.includes('streak') || name.includes('highlight');
-    } else {
+    } else if (posSection === 'women') {
       if (selectedCategory === 'Hair Cut & Styling')
         return name.includes('cut') || name.includes('style') || name.includes('wash') || name.includes('blow') || name.includes('hair');
       if (selectedCategory === 'Facial & Clean Up')
@@ -385,6 +515,13 @@ export default function AdminBillingPOSPage() {
     }
     return cat.includes(selectedCategory.toLowerCase()) || name.includes(selectedCategory.toLowerCase());
   });
+
+  // Services filtered for service manager modal
+  const managerFilteredServices = serviceManagerFilter === 'all'
+    ? services
+    : serviceManagerFilter === 'men'
+    ? menServices
+    : womenServices;
 
   // Customer search suggestions (search by phone or name)
   const filteredCustomers = searchCustomer.trim()
@@ -476,6 +613,10 @@ export default function AdminBillingPOSPage() {
   // Open Generate Bill Modal
   const handleOpenGenerateBill = () => {
     if (billItems.length === 0) return;
+    if (!selectedChairId) {
+      alert('Please select a chair before generating the bill.');
+      return;
+    }
     const now = new Date();
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     setGeneratedBillNo(`HM-2025-06-${randomNum}`);
@@ -483,6 +624,11 @@ export default function AdminBillingPOSPage() {
     setGeneratedTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setShowGenerateModal(true);
   };
+
+  // Derived chair info
+  const selectedChair = chairs.find(c => c.id === selectedChairId);
+  const menChairs = chairs.filter(c => c.section === 'men');
+  const womenChairs = chairs.filter(c => c.section === 'women');
 
   // EZO 58mm Printer Hardware State
   const [printerStatus, setPrinterStatus] = useState<'ready' | 'bluetooth' | 'serial'>('ready');
@@ -694,6 +840,7 @@ export default function AdminBillingPOSPage() {
           customerPhone: isWalkInAnonymous ? 'Not Provided' : selectedCustomer.phone,
           customerWhatsapp: isWalkInAnonymous ? null : selectedCustomer.phone,
           customerNote: billNotes,
+          chairId: selectedChairId,
           date: new Date().toISOString(),
           time: generatedTime,
           status: 'completed',
@@ -777,36 +924,36 @@ export default function AdminBillingPOSPage() {
       <div className="pos-layout-grid">
         {/* Left Column: Select Services */}
         <div>
-          {/* Classic Two-Section Switcher: Men & Women */}
-          <div className="pos-gender-switch-container">
+          {/* Two-Section Switcher: Men & Women */}
+          <div className="pos-gender-switch-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
             <button
               type="button"
-              className={`pos-gender-switch-btn ${genderSection === 'men' ? 'active' : ''}`}
+              className={`pos-gender-switch-btn ${posSection === 'men' ? 'active' : ''}`}
               onClick={() => {
-                setGenderSection('men');
+                setPosSection('men');
                 setSelectedCategory('All');
               }}
             >
               <div className="pos-gender-switch-icon">🧔</div>
               <div className="pos-gender-switch-text">
                 <span className="pos-gender-switch-title">MEN'S SALON</span>
-                <span className="pos-gender-switch-sub">Haircuts, Beard Grooming, Spa &amp; Facials</span>
+                <span className="pos-gender-switch-sub">Haircuts, Grooming &amp; Spa</span>
               </div>
               <span className="pos-gender-count-badge">{menServices.length} Services</span>
             </button>
 
             <button
               type="button"
-              className={`pos-gender-switch-btn ${genderSection === 'women' ? 'active' : ''}`}
+              className={`pos-gender-switch-btn ${posSection === 'women' ? 'active' : ''}`}
               onClick={() => {
-                setGenderSection('women');
+                setPosSection('women');
                 setSelectedCategory('All');
               }}
             >
               <div className="pos-gender-switch-icon">👩</div>
               <div className="pos-gender-switch-text">
                 <span className="pos-gender-switch-title">WOMEN'S SALON</span>
-                <span className="pos-gender-switch-sub">Hair Styling, Clean Up, Waxing &amp; Treatments</span>
+                <span className="pos-gender-switch-sub">Styling, Facial &amp; Care</span>
               </div>
               <span className="pos-gender-count-badge">{womenServices.length} Services</span>
             </button>
@@ -814,14 +961,36 @@ export default function AdminBillingPOSPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
-              {genderSection === 'men' ? "Men's Services Catalogue" : "Women's Services Catalogue"}
+              {posSection === 'men' ? "Men's Services Catalogue" : "Women's Services Catalogue"}
             </h2>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {filteredServices.length} services available
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                {filteredServices.length} services
+              </span>
+              <button
+                type="button"
+                onClick={handleOpenServiceManager}
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  border: '1px solid rgba(212, 175, 55, 0.4)',
+                  color: 'var(--gold-400)',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.2s',
+                }}
+              >
+                ✏️ Edit Services
+              </button>
+            </div>
           </div>
 
-          {/* Subcategory Tabs for Selected Gender */}
+          {/* Subcategory Tabs */}
           <div className="pos-category-tabs">
             {currentCategories.map((cat) => (
               <button
@@ -835,7 +1004,7 @@ export default function AdminBillingPOSPage() {
             ))}
           </div>
 
-          {/* Service Image Cards Grid - Distinct image for each service */}
+          {/* Service Image Cards Grid */}
           <div className="pos-services-grid">
             {filteredServices.map((service, idx) => {
               const serviceImg = service.image || getServiceImage(service.name, idx);
@@ -881,6 +1050,66 @@ export default function AdminBillingPOSPage() {
 
         {/* Right Column: Current Bill with Customer Lookup at the TOP */}
         <div>
+          {/* ── Chair Selection (Required) ── */}
+          <div className="pos-chair-selection-card">
+            <div className="pos-chair-header">
+              <span className="pos-chair-title">🪑 Select Chair</span>
+              {selectedChair && (
+                <span className="pos-chair-active-badge">
+                  {selectedChair.section === 'men' ? '🧔' : '👩'} {selectedChair.name}
+                </span>
+              )}
+            </div>
+
+            {menChairs.length > 0 && (
+              <div className="pos-chair-section">
+                <div className="pos-chair-section-label">Men's Section</div>
+                <div className="pos-chair-buttons">
+                  {menChairs.map((chair) => (
+                    <button
+                      key={chair.id}
+                      type="button"
+                      className={`pos-chair-btn ${selectedChairId === chair.id ? 'active' : ''}`}
+                      onClick={() => setSelectedChairId(chair.id)}
+                    >
+                      <span className="pos-chair-btn-name">{chair.name}</span>
+                      {chair.assignedStaff && (
+                        <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {womenChairs.length > 0 && (
+              <div className="pos-chair-section">
+                <div className="pos-chair-section-label">Women's Section</div>
+                <div className="pos-chair-buttons">
+                  {womenChairs.map((chair) => (
+                    <button
+                      key={chair.id}
+                      type="button"
+                      className={`pos-chair-btn women ${selectedChairId === chair.id ? 'active' : ''}`}
+                      onClick={() => setSelectedChairId(chair.id)}
+                    >
+                      <span className="pos-chair-btn-name">{chair.name}</span>
+                      {chair.assignedStaff && (
+                        <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {chairs.length === 0 && (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>
+                No chairs configured. <a href="/admin/chairs" style={{ color: 'var(--gold-400)' }}>Set up chairs</a>
+              </div>
+            )}
+          </div>
+
           <div className="pos-current-bill-card">
             {/* ── TOP OF CURRENT BILL: Customer Search Bar & Client Selection ── */}
             <div className="pos-bill-client-header">
@@ -1228,13 +1457,18 @@ export default function AdminBillingPOSPage() {
             </div>
 
             {/* Generate Bill Button */}
+            {!selectedChairId && billItems.length > 0 && (
+              <div style={{ fontSize: '11.5px', color: '#F59E0B', textAlign: 'center', marginBottom: '8px', padding: '6px', background: 'rgba(245,158,11,0.08)', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                ⚠️ Please select a chair above to generate the bill
+              </div>
+            )}
             <button
               type="button"
               className="pos-btn-generate"
-              disabled={billItems.length === 0}
+              disabled={billItems.length === 0 || !selectedChairId}
               onClick={handleOpenGenerateBill}
             >
-              Generate Bill
+              Generate Bill {selectedChair ? `— ${selectedChair.section === 'men' ? '🧔' : '👩'} ${selectedChair.name}` : ''}
             </button>
           </div>
         </div>
@@ -1299,6 +1533,11 @@ export default function AdminBillingPOSPage() {
                       <span>Date: {generatedDate}</span>
                       <span>Time: {generatedTime}</span>
                     </div>
+                    {selectedChair && (
+                      <div style={{ marginTop: '4px' }}>
+                        Chair: <b>{selectedChair.section === 'men' ? 'Men' : 'Women'} — {selectedChair.name}</b>
+                      </div>
+                    )}
                     <div style={{ marginTop: '4px' }}>
                       Customer: <b>{isWalkInAnonymous ? 'Walk-in Guest' : selectedCustomer.name}</b>
                     </div>
@@ -1677,6 +1916,398 @@ export default function AdminBillingPOSPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ═══ SERVICE MANAGEMENT MODAL ═══ */}
+      {showServiceManager && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setShowServiceManager(false)}
+        >
+          <div
+            style={{
+              background: '#0E131E',
+              border: '1px solid rgba(212,175,55,0.3)',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '720px',
+              maxHeight: '85vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 22px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#FFF', margin: 0 }}>
+                  ✏️ Manage Services
+                </h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+                  Add, edit or remove salon services. Changes reflect instantly in POS.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowServiceManager(false)}
+                style={{ color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer', background: 'none', border: 'none' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>
+              {serviceFormMode === 'list' ? (
+                <>
+                  {/* Filter + Add Button Row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '10px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {(['all', 'men', 'women'] as const).map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setServiceManagerFilter(f)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            border: serviceManagerFilter === f ? '1px solid var(--gold-400)' : '1px solid rgba(255,255,255,0.1)',
+                            background: serviceManagerFilter === f ? 'rgba(212,175,55,0.15)' : 'transparent',
+                            color: serviceManagerFilter === f ? 'var(--gold-400)' : 'var(--text-secondary)',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {f === 'all' ? 'All Services' : f === 'men' ? "🧔 Men's" : "👩 Women's"}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleStartAddService}
+                      style={{
+                        background: 'var(--gold-400)',
+                        color: '#0A0D14',
+                        padding: '8px 18px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                      }}
+                    >
+                      + Add Service
+                    </button>
+                  </div>
+
+                  {/* Services Table */}
+                  <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
+                    {/* Table Header */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 100px 80px 120px',
+                        gap: '8px',
+                        padding: '10px 14px',
+                        background: 'rgba(255,255,255,0.03)',
+                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: 'var(--text-muted)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                      }}
+                    >
+                      <span>Service Name</span>
+                      <span>Price</span>
+                      <span>Category</span>
+                      <span style={{ textAlign: 'right' }}>Actions</span>
+                    </div>
+
+                    {/* Service Rows */}
+                    <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
+                      {managerFilteredServices.length === 0 ? (
+                        <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                          No services found. Click "+ Add Service" to create one.
+                        </div>
+                      ) : (
+                        managerFilteredServices.map((s) => (
+                          <div
+                            key={s.id}
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 100px 80px 120px',
+                              gap: '8px',
+                              padding: '10px 14px',
+                              alignItems: 'center',
+                              borderBottom: '1px solid rgba(255,255,255,0.04)',
+                              transition: 'background 0.15s',
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 600, color: '#FFF' }}>{s.name}</div>
+                              {s.duration && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{s.duration} mins</div>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold-400)' }}>₹{s.price}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              {s.category?.gender === 'men' ? '🧔' : s.category?.gender === 'women' ? '👩' : '🔄'}{' '}
+                              {s.category?.gender || 'Unisex'}
+                            </div>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditService(s)}
+                                style={{
+                                  background: 'rgba(59,130,246,0.15)',
+                                  border: '1px solid rgba(59,130,246,0.3)',
+                                  color: '#60A5FA',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteService(s.id)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.12)',
+                                  border: '1px solid rgba(239,68,68,0.3)',
+                                  color: '#F87171',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Add / Edit Service Form */
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setServiceFormMode('list')}
+                      style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'var(--text-secondary)',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ← Back
+                    </button>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFF', margin: 0 }}>
+                      {serviceFormMode === 'add' ? '+ Add New Service' : `Edit: ${editingService?.name}`}
+                    </h3>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {/* Service Name */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: '#FFF', fontWeight: 600, marginBottom: '4px' }}>
+                        Service Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Normal Hair Cut"
+                        value={serviceForm.name}
+                        onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                        style={{
+                          width: '100%',
+                          background: '#121723',
+                          border: '1px solid rgba(212,175,55,0.4)',
+                          borderRadius: '8px',
+                          color: '#FFF',
+                          padding: '11px 14px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                        }}
+                      />
+                    </div>
+
+                    {/* Price & Duration Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
+                          Price (₹) *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="10"
+                          placeholder="e.g. 150"
+                          value={serviceForm.price}
+                          onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                          style={{
+                            width: '100%',
+                            background: '#121723',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#FFF',
+                            padding: '11px 14px',
+                            fontSize: '14px',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
+                          Duration (mins)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          placeholder="e.g. 30"
+                          value={serviceForm.duration}
+                          onChange={(e) => setServiceForm({ ...serviceForm, duration: e.target.value })}
+                          style={{
+                            width: '100%',
+                            background: '#121723',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            color: '#FFF',
+                            padding: '11px 14px',
+                            fontSize: '14px',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Category Selector */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
+                        Category *
+                      </label>
+                      <select
+                        value={serviceForm.categoryId}
+                        onChange={(e) => setServiceForm({ ...serviceForm, categoryId: e.target.value })}
+                        style={{
+                          width: '100%',
+                          background: '#121723',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#FFF',
+                          padding: '11px 14px',
+                          fontSize: '13px',
+                        }}
+                      >
+                        <option value="">Select Category</option>
+                        {serviceCategories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.gender === 'men' ? '🧔 ' : cat.gender === 'women' ? '👩 ' : '🔄 '}
+                            {cat.name} ({cat.gender || 'unisex'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
+                        Description (optional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Brief description of the service"
+                        value={serviceForm.description}
+                        onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
+                        style={{
+                          width: '100%',
+                          background: '#121723',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: '8px',
+                          color: '#FFF',
+                          padding: '11px 14px',
+                          fontSize: '13px',
+                          resize: 'none',
+                        }}
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setServiceFormMode('list')}
+                        style={{
+                          flex: 1,
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'var(--text-secondary)',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveService}
+                        disabled={savingService}
+                        style={{
+                          flex: 1,
+                          background: savingService ? 'rgba(212,175,55,0.3)' : 'var(--gold-400)',
+                          border: 'none',
+                          color: '#0A0D14',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: savingService ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {savingService ? 'Saving...' : serviceFormMode === 'add' ? '+ Add Service' : '💾 Update Service'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

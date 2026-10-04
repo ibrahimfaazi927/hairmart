@@ -25,6 +25,7 @@ export async function GET(request: Request) {
       where,
       include: {
         customer: true,
+        chair: true,
         package: true,
         services: {
           include: {
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
       customerPhone,
       customerWhatsapp,
       customerNote,
+      chairId,
       date,
       time,
       services,
@@ -67,6 +69,25 @@ export async function POST(request: Request) {
       status,
       isWalkIn,
     } = body;
+
+    // Validate chair for billing
+    let validChairId: string | null = null;
+    let chairName: string | null = null;
+    let chairSection: string | null = null;
+
+    if (chairId) {
+      const chair = await prisma.chair.findUnique({ where: { id: chairId } });
+      if (chair) {
+        validChairId = chair.id;
+        chairName = chair.name;
+        chairSection = chair.section;
+      } else {
+        return NextResponse.json({ error: 'Selected chair not found' }, { status: 400 });
+      }
+    } else if (items && items.length > 0) {
+      // Chair is strictly required when generating a bill
+      return NextResponse.json({ error: 'Chair selection is required for billing' }, { status: 400 });
+    }
 
     const appointmentDate = date ? new Date(date) : new Date();
     const appointmentTime = time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -236,6 +257,9 @@ export async function POST(request: Request) {
         status: status || 'pending',
         packageId: validPackageId,
         totalAmount,
+        chairId: validChairId,
+        chairName: chairName,
+        section: chairSection,
         ...(serviceCreateData.length > 0
           ? {
               services: {
@@ -246,6 +270,7 @@ export async function POST(request: Request) {
       },
       include: {
         customer: true,
+        chair: true,
         services: {
           include: {
             service: true,

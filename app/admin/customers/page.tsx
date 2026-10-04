@@ -123,8 +123,8 @@ export default function AdminCustomersCRMPage() {
         ...c,
         appointments: appts,
         bills: appts.filter((a: any) => a.payment || a.invoice),
-        favouriteServices: favs.length > 0 ? favs : ['Hair Cut (Men)', 'Beard Set', 'Facial'],
-        staffAttribution: staffSet.size > 0 ? Array.from(staffSet) : ['Rahul S', 'Priya Sharma'],
+        favouriteServices: favs,
+        staffAttribution: Array.from(staffSet),
       });
       setShowDetailDrawer(true);
     } catch (err) {

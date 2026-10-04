@@ -8,7 +8,7 @@ export async function PATCH(
   try {
     const params = await props.params;
     const body = await request.json();
-    const { name, description, duration, price, priceVisible, categoryId, active, productIds } = body;
+    const { name, description, duration, price, priceVisible, categoryId, active, image, productIds } = body;
 
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -17,6 +17,7 @@ export async function PATCH(
     if (price !== undefined) updateData.price = parseFloat(price);
     if (priceVisible !== undefined) updateData.priceVisible = !!priceVisible;
     if (categoryId !== undefined) updateData.categoryId = categoryId;
+    if (image !== undefined) updateData.image = image;
     if (active !== undefined) updateData.active = !!active;
 
     const updated = await prisma.service.update({

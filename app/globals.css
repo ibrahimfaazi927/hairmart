@@ -3345,3 +3345,195 @@ h1, h2, h3, h4, h5, h6 {
     animation: none !important;
   }
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   POS CHAIR SELECTION & TABLET OPTIMIZATIONS (Xiaomi Pad 7 Pro)
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* POS Chair Selection Card */
+.pos-chair-selection-card {
+  background: #0E121B;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.pos-chair-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.pos-chair-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gold-400);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pos-chair-active-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold-300);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+
+.pos-chair-section {
+  margin-top: 8px;
+}
+
+.pos-chair-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.pos-chair-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.pos-chair-btn {
+  background: #121723;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 48px;
+  text-align: center;
+}
+
+.pos-chair-btn:hover {
+  background: #1A2133;
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
+.pos-chair-btn.active {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.1) 100%);
+  border: 2px solid var(--gold-400);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
+}
+
+.pos-chair-btn.women.active {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(236, 72, 153, 0.1) 100%);
+  border: 2px solid #EC4899;
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.35);
+}
+
+.pos-chair-btn-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.pos-chair-btn.active .pos-chair-btn-name {
+  color: var(--gold-300);
+}
+
+.pos-chair-btn.women.active .pos-chair-btn-name {
+  color: #F472B6;
+}
+
+.pos-chair-btn-staff {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 2px;
+}
+
+.pos-chair-btn.active .pos-chair-btn-staff {
+  color: #E2E8F0;
+}
+
+/* Tablet Optimizations: Xiaomi Pad 7 Pro & Similar Tablets (768px - 1280px) */
+@media (min-width: 768px) and (max-width: 1280px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .pos-layout-grid {
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+  }
+
+  .pos-services-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .pos-service-img-wrapper {
+    height: 95px;
+  }
+
+  .pos-service-info {
+    padding: 10px 8px;
+  }
+
+  .pos-service-name {
+    font-size: 12px;
+  }
+
+  .pos-service-price {
+    font-size: 13px;
+  }
+
+  .pos-tab-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+
+  .pos-gender-switch-btn {
+    padding: 10px 12px;
+    min-height: 48px;
+  }
+
+  .pos-chair-btn {
+    min-height: 48px;
+    padding: 6px 4px;
+  }
+
+  .pos-current-bill-card {
+    padding: 14px;
+    top: 70px;
+  }
+
+  .pos-bill-items-list {
+    max-height: 240px;
+  }
+
+  /* Admin Table touch improvements */
+  .admin-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 10px 12px;
+  }
+}
+

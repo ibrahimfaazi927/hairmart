@@ -23,7 +23,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, brand, description, image, serviceIds } = body;
+    const { name, brand, description, image, price, stock, category, active, professional, serviceIds } = body;
 
     if (!name || !brand) {
       return NextResponse.json({ error: 'Product name and brand are required' }, { status: 400 });
@@ -35,7 +35,11 @@ export async function POST(request: Request) {
         brand,
         description,
         image,
-        professional: true,
+        price: price ? parseFloat(price) : 0,
+        stock: stock ? parseInt(stock) : 0,
+        category: category || 'Hair Care',
+        active: active !== undefined ? !!active : true,
+        professional: professional !== undefined ? !!professional : true,
       },
     });
 

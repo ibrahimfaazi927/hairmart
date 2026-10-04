@@ -21,7 +21,10 @@ const navSections: NavSection[] = [
     title: 'SALON OPERATIONS',
     items: [
       { href: '/admin', label: 'Overview', icon: '📊' },
-      { href: '/admin/billing', label: 'Billing', icon: '💳' },
+      { href: '/admin/billing', label: 'POS Billing', icon: '💳' },
+      { href: '/admin/chairs', label: 'Chair Management', icon: '🪑' },
+      { href: '/admin/staff', label: 'Staff & Attendance', icon: '👔' },
+      { href: '/staff', label: 'Staff Terminal (Walk In/Out)', icon: '⏱️' },
       { href: '/admin/customers', label: 'Customers / CRM', icon: '👥' },
     ],
   },
@@ -33,21 +36,16 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: 'RETENTION & MARKETING',
+    title: 'REPORTS & AUDIT',
     items: [
-      { href: '/admin/reviews', label: 'Reviews & Feedback', icon: '⭐' },
-      { href: '/admin/gallery', label: 'Studio Gallery', icon: '🖼️' },
-    ],
-  },
-  {
-    title: 'REPORTS',
-    items: [
-      { href: '/admin/reports', label: 'Business Reports', icon: '📑' },
+      { href: '/admin/reports', label: 'Revenue & Reports', icon: '📑' },
     ],
   },
   {
     title: 'CONFIGURATION',
     items: [
+      { href: '/admin/reviews', label: 'Reviews & Feedback', icon: '⭐' },
+      { href: '/admin/gallery', label: 'Studio Gallery', icon: '🖼️' },
       { href: '/admin/settings', label: 'Salon Settings', icon: '⚙️' },
     ],
   },
@@ -126,8 +124,14 @@ export default function AdminLayout({
     pageTitle = 'Hair Mart Studio — Overview';
     pageSubtitle = 'Real-time salon KPIs, daily revenue and customer activity';
   } else if (pathname === '/admin/billing') {
-    pageTitle = 'Hair Mart Studio — Billing';
-    pageSubtitle = 'Process services, generate bill and complete the transaction';
+    pageTitle = 'Hair Mart Studio — POS Billing';
+    pageSubtitle = 'Touch POS: Select customer, chair, services and print receipt';
+  } else if (pathname === '/admin/chairs') {
+    pageTitle = 'Hair Mart Studio — Chair Management';
+    pageSubtitle = 'Styling chairs (Men 1-4 & Women 1-2), staff assignment and active status';
+  } else if (pathname === '/admin/staff') {
+    pageTitle = 'Hair Mart Studio — Staff & Attendance Hub';
+    pageSubtitle = 'Staff profiles, daily walk-in/walk-out, leave management and chair assignments';
   } else if (pathname === '/admin/customers') {
     pageTitle = 'Hair Mart Studio — Client Management';
     pageSubtitle = 'Manage your customers, visit history and contact profiles';
@@ -145,7 +149,7 @@ export default function AdminLayout({
     pageSubtitle = 'Interior, haircut, and styling showcase photography';
   } else if (pathname === '/admin/reports') {
     pageTitle = 'Hair Mart Studio — Business Reports';
-    pageSubtitle = 'Sales breakdown, payment methods, staff revenue and CSV export';
+    pageSubtitle = 'Sales breakdown, payment methods, chair-wise revenue and CSV export';
   } else if (pathname === '/admin/settings') {
     pageTitle = 'Hair Mart Studio — Salon Settings';
     pageSubtitle = 'Salon profile, printer connection, WhatsApp and payment settings';

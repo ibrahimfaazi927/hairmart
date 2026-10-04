@@ -23,6 +23,8 @@ export interface InvoiceData {
   total: number;
   paymentStatus: string;
   paymentMethod?: string;
+  chair?: string;
+  section?: string;
   createdAt: string;
 }
 
@@ -107,6 +109,8 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       <div>
         <div class="detail-label">Appointment Date</div>
         <div class="detail-value">${data.appointmentDate}</div>
+        <div class="detail-label" style="margin-top:12px;">Chair / Station</div>
+        <div class="detail-value" style="color: #C9A96E; font-weight: 600;">${data.chair || 'Not Assigned'}${data.section ? ` (${data.section.toUpperCase()})` : ''}</div>
         ${data.packageName ? `<div class="detail-label" style="margin-top:12px;">Package</div><div class="detail-value">${data.packageName}</div>` : ''}
         ${data.paymentMethod ? `<div class="detail-label" style="margin-top:12px;">Payment Method</div><div class="detail-value" style="text-transform:capitalize;">${data.paymentMethod}</div>` : ''}
       </div>

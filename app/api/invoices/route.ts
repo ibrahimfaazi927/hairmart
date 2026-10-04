@@ -15,6 +15,7 @@ export async function GET(request: Request) {
           customer: true,
           appointment: {
             include: {
+              chair: true,
               services: { include: { service: true } },
               package: true,
               products: { include: { product: true } },
@@ -29,6 +30,9 @@ export async function GET(request: Request) {
       }
 
       if (format === 'html') {
+        const chairDisplay = invoice.chairName || invoice.appointment?.chairName || invoice.appointment?.chair?.name || 'Not Assigned';
+        const sectionDisplay = invoice.section || invoice.appointment?.section || invoice.appointment?.chair?.section || '';
+
         const html = generateInvoiceHTML({
           invoiceNumber: invoice.invoiceNumber,
           salonName: 'Hair Mart Unisex Salon',
@@ -50,6 +54,8 @@ export async function GET(request: Request) {
           total: invoice.total,
           paymentStatus: invoice.status,
           paymentMethod: invoice.appointment.payment?.method,
+          chair: chairDisplay,
+          section: sectionDisplay,
           createdAt: invoice.createdAt.toISOString().split('T')[0],
         });
 
@@ -66,6 +72,7 @@ export async function GET(request: Request) {
         customer: true,
         appointment: {
           include: {
+            chair: true,
             services: { include: { service: true } },
             package: true,
             payment: true,

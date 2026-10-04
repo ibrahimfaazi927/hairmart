@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     const appointment = await prisma.appointment.findUnique({
       where: { id: appointmentId },
-      include: { customer: true, services: { include: { service: true, staff: true } } },
+      include: { customer: true, chair: true, services: { include: { service: true, staff: true } } },
     });
 
     if (!appointment) {
@@ -56,6 +56,8 @@ export async function POST(request: Request) {
     const finalDiscount = discount !== undefined ? parseFloat(discount) : 0;
     const finalMethod = method || 'cash';
     const finalStatus = status || 'completed';
+    const chairName = appointment.chairName || appointment.chair?.name || null;
+    const section = appointment.section || appointment.chair?.section || null;
 
     // Upsert payment record
     const payment = await prisma.payment.upsert({
@@ -88,6 +90,8 @@ export async function POST(request: Request) {
         discount: finalDiscount,
         total: finalAmount,
         paymentMethod: finalMethod,
+        chairName,
+        section,
         printReceipt: Boolean(printReceipt),
         whatsappStatus: whatsappStatus || 'not_requested',
         notes: notes || null,
@@ -99,6 +103,8 @@ export async function POST(request: Request) {
         discount: finalDiscount,
         total: finalAmount,
         paymentMethod: finalMethod,
+        chairName,
+        section,
         printReceipt: Boolean(printReceipt),
         whatsappStatus: whatsappStatus || 'not_requested',
         notes: notes || null,

@@ -57,76 +57,7 @@ export async function GET(request: Request) {
       },
     });
 
-    // 3. Compute per-staff attribution metrics
-    // Realistic fallback/seed values if salon just started so dashboard looks like production system
-    const baseStats: Record<string, { services: number; bills: number; revenue: number; customers: number; serviceBreakdown: Record<string, { count: number; revenue: number }> }> = {
-      'Priya Sharma': {
-        services: 42,
-        bills: 32,
-        revenue: 32400,
-        customers: 28,
-        serviceBreakdown: {
-          'Facial': { count: 18, revenue: 7200 },
-          'Hair Spa': { count: 12, revenue: 4800 },
-          'Hair Styling': { count: 8, revenue: 4800 },
-          'Hair Color': { count: 4, revenue: 4800 },
-        },
-      },
-      'Rahul S': {
-        services: 36,
-        bills: 28,
-        revenue: 28600,
-        customers: 25,
-        serviceBreakdown: {
-          'Hair Cut (Men)': { count: 24, revenue: 4800 },
-          'Beard Set': { count: 16, revenue: 2400 },
-          'Shave': { count: 12, revenue: 1800 },
-          'Hair Color': { count: 6, revenue: 7200 },
-        },
-      },
-      'Arjun S': {
-        services: 30,
-        bills: 24,
-        revenue: 24500,
-        customers: 22,
-        serviceBreakdown: {
-          'Hair Cut (Men)': { count: 20, revenue: 4000 },
-          'Beard Set': { count: 14, revenue: 2100 },
-          'Hair Styling': { count: 6, revenue: 3600 },
-        },
-      },
-      'Ananya M': {
-        services: 28,
-        bills: 22,
-        revenue: 19200,
-        customers: 20,
-        serviceBreakdown: {
-          'Hair Spa': { count: 14, revenue: 5600 },
-          'Facial': { count: 10, revenue: 4000 },
-        },
-      },
-      'Vikram K': {
-        services: 24,
-        bills: 18,
-        revenue: 16800,
-        customers: 16,
-        serviceBreakdown: {
-          'Hair Cut (Men)': { count: 12, revenue: 2400 },
-          'Hair Color': { count: 8, revenue: 9600 },
-        },
-      },
-      'Sneha Rao': {
-        services: 22,
-        bills: 16,
-        revenue: 14750,
-        customers: 15,
-        serviceBreakdown: {
-          'Hair Spa': { count: 12, revenue: 4800 },
-          'Facial': { count: 8, revenue: 3200 },
-        },
-      },
-    };
-
+    // 3. Compute per-staff attribution metrics purely from real database records
     const staffMetrics = allStaff.map((staff) => {
       // Find real recorded items for this staff member
       const matchingItems = apptServices.filter(
@@ -153,34 +84,13 @@ export async function GET(request: Request) {
         breakdownMap[sName].revenue += rev;
       });
 
-      const fallback = baseStats[staff.name];
-      const useBaseline = range !== 'today' && range !== 'custom';
-      const baseCount = useBaseline && fallback ? fallback.services : 0;
-      const baseBills = useBaseline && fallback ? fallback.bills : 0;
-      const baseRev = useBaseline && fallback ? fallback.revenue : 0;
-      const baseCust = useBaseline && fallback ? fallback.customers : 0;
-
-      const totalServices = baseCount + realServices;
-      const totalBills = baseBills + uniqueAppointments;
-      const totalRevenue = baseRev + realRevenue;
-      const totalCustomers = baseCust + uniqueCustomers;
+      const totalServices = realServices;
+      const totalBills = uniqueAppointments;
+      const totalRevenue = realRevenue;
+      const totalCustomers = uniqueCustomers;
       const avgBill = totalBills > 0 ? Math.round(totalRevenue / totalBills) : 0;
 
-      // Merge breakdown
-      const combinedBreakdown: Record<string, { count: number; revenue: number }> = {};
-      if (useBaseline && fallback) {
-        Object.entries(fallback.serviceBreakdown).forEach(([name, data]) => {
-          combinedBreakdown[name] = { count: data.count, revenue: data.revenue };
-        });
-      }
-      Object.entries(breakdownMap).forEach(([name, data]) => {
-        if (!combinedBreakdown[name]) {
-          combinedBreakdown[name] = { count: 0, revenue: 0 };
-        }
-        combinedBreakdown[name].count += data.count;
-        combinedBreakdown[name].revenue += data.revenue;
-      });
-      const finalBreakdown = Object.entries(combinedBreakdown).map(([serviceName, data]) => ({
+      const finalBreakdown = Object.entries(breakdownMap).map(([serviceName, data]) => ({
         serviceName,
         ...data,
       }));

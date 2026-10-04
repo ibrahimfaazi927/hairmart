@@ -503,6 +503,195 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── Accepted Payment Methods Section ──────── */}
+      <section className="section animate-fade-up" style={{
+        background: '#080B11',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: 'var(--space-10) 0',
+      }}>
+        <div className="container">
+          <div className="section-header text-center" style={{ marginBottom: '32px' }}>
+            <span className="section-subtitle">Convenient &amp; Flexible Billing</span>
+            <h2 className="heading-md" style={{ color: '#FFFFFF', marginTop: '6px', marginBottom: '8px' }}>
+              Payment Methods <span className="text-accent">Accepted</span>
+            </h2>
+            <div className="section-divider" />
+            <p style={{ maxWidth: '580px', margin: '0 auto', fontSize: '13.5px', color: 'var(--text-secondary)' }}>
+              We ensure a smooth checkout experience. Pay effortlessly using your preferred method at our salon front desk.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
+          }}>
+            {/* 1. Credit & Debit Cards */}
+            <div style={{
+              background: '#0E131E',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              padding: '22px 20px',
+              transition: 'all 0.2s',
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '10px',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                marginBottom: '14px',
+              }}>
+                💳
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFF', margin: '0 0 6px 0' }}>
+                Credit &amp; Debit Cards
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 12px 0' }}>
+                Fast contactless tap-to-pay, chip &amp; PIN on our secure digital POS machines.
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#93C5FD' }}>Visa</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#F87171' }}>MasterCard</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#4ADE80' }}>RuPay</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Maestro</span>
+              </div>
+            </div>
+
+            {/* 2. Instant UPI */}
+            <div style={{
+              background: '#0E131E',
+              border: '1px solid rgba(34, 197, 94, 0.2)',
+              borderRadius: '12px',
+              padding: '22px 20px',
+              transition: 'all 0.2s',
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '10px',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                marginBottom: '14px',
+              }}>
+                📱
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFF', margin: '0 0 6px 0' }}>
+                Instant UPI &amp; QR
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 12px 0' }}>
+                Instant zero-fee scan &amp; pay via any UPI app directly at the billing counter or salon chair.
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#4ADE80' }}>Google Pay</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#A78BFA' }}>PhonePe</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#38BDF8' }}>Paytm</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: 'var(--gold-400)' }}>BHIM UPI</span>
+              </div>
+            </div>
+
+            {/* 3. Bank Transfer */}
+            <div style={{
+              background: '#0E131E',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              padding: '22px 20px',
+              transition: 'all 0.2s',
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '10px',
+                background: 'rgba(212, 175, 55, 0.15)',
+                border: '1px solid rgba(212, 175, 55, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                marginBottom: '14px',
+              }}>
+                🏦
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFF', margin: '0 0 6px 0' }}>
+                Direct Bank Transfer
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 12px 0' }}>
+                IMPS, NEFT &amp; Net Banking transfers accepted for bridal packages and pre-scheduled appointments.
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: 'var(--gold-400)' }}>IMPS</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>NEFT / RTGS</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#93C5FD' }}>Net Banking</span>
+              </div>
+            </div>
+
+            {/* 4. Cash Payments */}
+            <div style={{
+              background: '#0E131E',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              padding: '22px 20px',
+              transition: 'all 0.2s',
+            }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '10px',
+                background: 'rgba(234, 179, 8, 0.15)',
+                border: '1px solid rgba(234, 179, 8, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                marginBottom: '14px',
+              }}>
+                💵
+              </div>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFF', margin: '0 0 6px 0' }}>
+                Cash Payments
+              </h3>
+              <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: '0 0 12px 0' }}>
+                Traditional Indian Rupee (INR) cash accepted at the front desk with instant printed GST receipt.
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#FACC15' }}>INR Cash</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: '#4ADE80' }}>Instant Bill</span>
+                <span className="badge badge-neutral" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Printed Slip</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Reassurance Bar */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: '10px',
+            padding: '12px 18px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '24px',
+            flexWrap: 'wrap',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+          }}>
+            <span>🔒 <b>100% Secure Checkout</b></span>
+            <span>🧾 <b>Official GST Printed &amp; WhatsApp Invoices</b></span>
+            <span>⚡ <b>Instant Verification</b></span>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Contact & Visit CTA Banner with Google Maps CTA ── */}
       <section className="animate-fade-up" style={{
         padding: 'var(--space-12) 0',

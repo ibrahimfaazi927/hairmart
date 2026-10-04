@@ -5,48 +5,33 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
+    const section = searchParams.get('section');
 
     const where: any = {};
     if (status && status !== 'all') {
       where.status = status;
     }
+    if (section && section !== 'all') {
+      where.section = section.toLowerCase();
+    }
 
     const staffList = await prisma.staff.findMany({
       where,
       include: {
-        appointmentServices: {
-          include: {
-            service: true,
-            appointment: true,
-          },
+        chair: true,
+        attendances: {
+          orderBy: { date: 'desc' },
+          take: 31,
+        },
+        leaves: {
+          orderBy: { startDate: 'desc' },
+          take: 10,
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ section: 'asc' }, { name: 'asc' }],
     });
 
-    // Compute basic totals for each staff member
-    const enriched = staffList.map((s) => {
-      const completedServices = s.appointmentServices || [];
-      const totalServices = completedServices.reduce((sum, item) => sum + (item.quantity || 1), 0);
-      const totalRevenue = completedServices.reduce((sum, item) => sum + ((item.quantity || 1) * item.price), 0);
-      const uniqueAppointments = new Set(completedServices.map((item) => item.appointmentId)).size;
-
-      return {
-        id: s.id,
-        name: s.name,
-        role: s.role,
-        phone: s.phone,
-        avatar: s.avatar,
-        status: s.status,
-        joiningDate: s.joiningDate,
-        specialties: s.specialties,
-        totalServices,
-        totalRevenue,
-        uniqueAppointments,
-      };
-    });
-
-    return NextResponse.json(enriched);
+    return NextResponse.json(staffList);
   } catch (error: any) {
     console.error('Failed to fetch staff:', error);
     return NextResponse.json({ error: error.message || 'Failed to fetch staff' }, { status: 500 });
@@ -56,20 +41,50 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, role, phone, avatar, specialties, status } = body;
+    const {
+      name,
+      role,
+      phone,
+      gender,
+      section,
+      chairId,
+      joiningDate,
+      status,
+      notes,
+      avatar,
+      specialties,
+    } = body;
 
     if (!name || !role) {
       return NextResponse.json({ error: 'Name and role are required' }, { status: 400 });
     }
 
+    const parsedJoiningDate = joiningDate ? new Date(joiningDate) : new Date();
+
+    // If chairId provided, disconnect other staff assigned to that chair
+    if (chairId) {
+      await prisma.staff.updateMany({
+        where: { chairId },
+        data: { chairId: null },
+      });
+    }
+
     const newStaff = await prisma.staff.create({
       data: {
-        name,
-        role,
-        phone: phone || null,
-        avatar: avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
-        specialties: specialties || null,
+        name: name.trim(),
+        role: role.trim(),
+        phone: phone ? phone.trim() : null,
+        gender: gender || 'male',
+        section: section ? section.toLowerCase() : 'men',
+        chairId: chairId || null,
+        joiningDate: parsedJoiningDate,
         status: status || 'active',
+        notes: notes || null,
+        avatar: avatar || null,
+        specialties: specialties || null,
+      },
+      include: {
+        chair: true,
       },
     });
 

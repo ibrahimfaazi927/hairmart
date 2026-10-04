@@ -43,8 +43,8 @@ export default function AdminReviewsPage() {
           customerName: r.customerName || 'Client Guest',
           rating: r.rating || 5,
           comment: r.comment || 'Great experience, clean salon, friendly stylists.',
-          serviceName: r.serviceName || 'Hair Cut & Beard Set',
-          staffName: r.staffName || (idx % 2 === 0 ? 'Priya Sharma' : 'Rahul S'),
+          serviceName: r.serviceName || 'Salon Service',
+          staffName: r.staffName || 'Stylist',
           approved: r.approved !== false,
           createdAt: r.createdAt || new Date().toISOString(),
         }));

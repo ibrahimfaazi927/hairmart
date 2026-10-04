@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 interface ServiceItem {
+  id?: string;
   name: string;
-  desc: string;
+  desc?: string;
+  description?: string | null;
+  price?: number;
+  duration?: number | null;
+  category?: { id: string; name: string; gender?: string };
 }
 
-const womenServices: Record<string, ServiceItem[]> = {
+const FALLBACK_WOMEN_SERVICES: Record<string, Array<{ name: string; desc: string }>> = {
   'Hair Spa & Treatments': [
     { name: 'Express Hair Spa', desc: 'A quick revitalizing treatment for instant hair hydration and smooth shine.' },
     { name: 'Moisturizing Hair Spa', desc: 'Deep moisture therapy restoring softness, elasticity, and manageability.' },
@@ -32,7 +37,7 @@ const womenServices: Record<string, ServiceItem[]> = {
   ],
 };
 
-const menServices: Record<string, ServiceItem[]> = {
+const FALLBACK_MEN_SERVICES: Record<string, Array<{ name: string; desc: string }>> = {
   'Haircuts & Classic Grooming': [
     { name: 'Normal Hair Cut', desc: 'Classic haircut tailored to your preferred length, fade, and face profile.' },
     { name: 'Traditional Clean Shave', desc: 'Razor shave with hot towel prep and calming aftershave balm.' },
@@ -58,7 +63,6 @@ const menServices: Record<string, ServiceItem[]> = {
     { name: 'Beard Colouring & Tinting', desc: 'Natural uniform shade application for beards and mustaches.' },
     { name: 'Dimension Highlights', desc: 'Artistic foil highlights adding texture and depth to your cut.' },
     { name: 'Crown Area Touch-up', desc: 'Targeted touch-ups focused on the top and crown regions.' },
-    { name: 'Classic Natural Black', desc: 'Rich, authentic black tone restoring a youthful appearance.' },
   ],
   'Men’s Skin Care & De-Tan': [
     { name: 'De-Tan Face & Neck', desc: 'Sun-damage reversal and pore cleansing treatment for men.' },
@@ -69,8 +73,59 @@ const menServices: Record<string, ServiceItem[]> = {
 
 export default function ServicesPage() {
   const [activeTab, setActiveTab] = useState<'women' | 'men'>('women');
+  const [dbServices, setDbServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const currentServices = activeTab === 'women' ? womenServices : menServices;
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      const res = await fetch('/api/services');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.services && data.services.length > 0) {
+          setDbServices(data.services);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load services from catalogue:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Group services by category for current gender tab
+  const getGroupedServices = (): Record<string, Array<{ name: string; desc: string }>> => {
+    if (dbServices.length === 0) {
+      return activeTab === 'women' ? FALLBACK_WOMEN_SERVICES : FALLBACK_MEN_SERVICES;
+    }
+
+    const filtered = dbServices.filter((s) => {
+      const g = s.category?.gender?.toLowerCase();
+      if (!g || g === 'unisex') return true;
+      return g === activeTab;
+    });
+
+    if (filtered.length === 0) {
+      return activeTab === 'women' ? FALLBACK_WOMEN_SERVICES : FALLBACK_MEN_SERVICES;
+    }
+
+    const groups: Record<string, Array<{ name: string; desc: string }>> = {};
+    filtered.forEach((s) => {
+      const catName = s.category?.name || (activeTab === 'women' ? "Women's Services" : "Men's Services");
+      if (!groups[catName]) groups[catName] = [];
+      groups[catName].push({
+        name: s.name,
+        desc: s.description || (s.duration ? `Duration: ${s.duration} mins` : 'Professional salon service performed with precision and premium care.'),
+      });
+    });
+
+    return groups;
+  };
+
+  const currentServices = getGroupedServices();
 
   return (
     <>
@@ -107,38 +162,44 @@ export default function ServicesPage() {
             </div>
           </div>
 
-          {/* Service Categories (Clean 2-Column Grid without redundant buttons) */}
-          {Object.entries(currentServices).map(([category, services]) => (
-            <div key={category} style={{ marginBottom: 'var(--space-8)' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '12px',
-                paddingBottom: '6px',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-              }}>
-                <h2 className="heading-sm" style={{ color: '#FFFFFF', fontSize: '17px' }}>
-                  {category}
-                </h2>
-                <span className="badge badge-gold" style={{ fontSize: '10px' }}>
-                  {services.length} Services
-                </span>
-              </div>
-
-              <div className="services-grid">
-                {services.map((service) => (
-                  <div key={service.name} className="service-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ color: 'var(--gold-400)', fontSize: '14px' }}>✦</span>
-                      <h3 style={{ margin: 0 }}>{service.name}</h3>
-                    </div>
-                    <p>{service.desc}</p>
-                  </div>
-                ))}
-              </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--text-muted)' }}>
+              Loading services catalogue...
             </div>
-          ))}
+          ) : (
+            /* Service Categories Grid */
+            Object.entries(currentServices).map(([category, servicesList]) => (
+              <div key={category} style={{ marginBottom: 'var(--space-8)' }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px',
+                  paddingBottom: '6px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                }}>
+                  <h2 className="heading-sm" style={{ color: '#FFFFFF', fontSize: '17px' }}>
+                    {category}
+                  </h2>
+                  <span className="badge badge-gold" style={{ fontSize: '10px' }}>
+                    {servicesList.length} Services
+                  </span>
+                </div>
+
+                <div className="services-grid">
+                  {servicesList.map((service) => (
+                    <div key={service.name} className="service-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: 'var(--gold-400)', fontSize: '14px' }}>✦</span>
+                        <h3 style={{ margin: 0 }}>{service.name}</h3>
+                      </div>
+                      <p>{service.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 

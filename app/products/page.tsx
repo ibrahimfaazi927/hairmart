@@ -1,87 +1,117 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
-const products = [
+interface DbProduct {
+  id: string;
+  name: string;
+  brand: string;
+  description?: string | null;
+  image?: string | null;
+  price?: number | null;
+  stock?: number | null;
+  category?: string | null;
+  professional?: boolean;
+  services?: Array<{ service: { id: string; name: string } }>;
+}
+
+const FALLBACK_PRODUCTS: DbProduct[] = [
   {
+    id: 'fb-1',
     brand: 'O3+ Professional',
     name: 'Shine & Glow Single-Use 7-Step Facial Kit',
     image: '/images/products/o3-shine-glow.jpg',
-    desc: 'Renowned skincare formulation designed and developed in Italy. Formulated with potent brightening botanical complexes, lactic peel, and arbutin serum to deliver clear, luminous, and radiant skin without irritation.',
+    description: 'Renowned skincare formulation designed and developed in Italy. Formulated with potent brightening botanical complexes, lactic peel, and arbutin serum to deliver clear, luminous, and radiant skin without irritation.',
     category: 'Facial & Skin Aesthetics',
-    origin: 'Developed in Italy • Professional Salon Grade',
-    usedIn: 'Signature Glow Facial & Event Skin Prep',
-    badge: 'Italy Formulation',
-    features: [
-      'Single-use sealed hygienic 7-step kit',
-      'Instant luminosity & deep cellular hydration',
-      'Suitable for diverse skin tones and sensitive types',
-    ],
+    price: 1850,
+    professional: true,
   },
   {
+    id: 'fb-2',
     brand: "Nature's Essence",
     name: 'Advanced 24K Glowing Gold Facial Kit',
     image: '/images/products/natures-essence-gold.jpg',
-    desc: 'Complete professional gold facial therapy featuring a 5-step ritual that gently exfoliates dead surface cells, revitalizes microcirculation, and infuses gold bio-nutrients for lasting bridal glow.',
-    category: 'Gold Rejuvenation Ritual',
-    origin: 'Certified Professional Series',
-    usedIn: 'Glowing Gold Facial & Celebration Therapy',
-    badge: '5-Stage Treatment',
-    features: [
-      'Stage 1: Glowing Gold Cleanser',
-      'Stage 2: Gentle Gold Exfoliating Scrub',
-      'Stage 3: Nutrient-Rich Gold Massage Cream',
-      'Stage 4: Hydrating Gold Gel',
-      'Stage 5: Tightening Gold Firming Pack',
-    ],
+    description: 'Complete professional gold facial therapy featuring a 5-step ritual that gently exfoliates dead surface cells, revitalizes microcirculation, and infuses gold bio-nutrients for lasting bridal glow.',
+    category: 'Facial & Skin Aesthetics',
+    price: 1450,
+    professional: true,
   },
   {
+    id: 'fb-3',
     brand: 'Lotus Professional',
     name: 'Bridal Glow Skin Whitening Facial Kit',
     image: '/images/products/lotus-bridal-glow.jpg',
-    desc: 'High-efficacy skin whitening and radiance kit crafted for bridal, pre-wedding, and celebration skin preparation. Deep cleanses pores, minimizes sun tanning, and enhances natural radiance.',
+    description: 'High-efficacy skin whitening and radiance kit crafted for bridal, pre-wedding, and celebration skin preparation. Deep cleanses pores, minimizes sun tanning, and enhances natural radiance.',
     category: 'Bridal & Occasion Care',
-    origin: 'Lotus Professional Care Line',
-    usedIn: 'Bridal Glow & De-Tan Packages',
-    badge: 'Celebration Care',
-    features: [
-      'Pore refining and tone balancing',
-      'Targets sun damage, tanning, and dullness',
-      'Prolonged glow for wedding photography and events',
-    ],
+    price: 1650,
+    professional: true,
   },
   {
+    id: 'fb-4',
     brand: "L'Oréal Professional",
     name: 'Majirel & INOA Ammonia-Free Hair Colours',
     image: '/images/salon/hair-styling.jpg',
-    desc: 'World-class hair colour formulations providing 100% rich grey coverage, deep conditioning hair protection, and high-fashion dimensional reflects without harsh odors.',
+    description: 'World-class hair colour formulations providing 100% rich grey coverage, deep conditioning hair protection, and high-fashion dimensional reflects without harsh odors.',
     category: 'Hair Colouring & Highlights',
-    origin: "L'Oréal Professionnel Paris",
-    usedIn: 'Grey Coverage, Streaks & Fashion Shades',
-    badge: 'Ammonia-Free Options',
-    features: [
-      'Optimal scalp comfort during processing',
-      'Long-lasting pigment retention and lustrous shine',
-      'Broad palette from classic naturals to bold shades',
-    ],
+    price: 850,
+    professional: true,
   },
   {
+    id: 'fb-5',
     brand: 'Schwarzkopf Professional',
     name: 'Fibre Clinix Restorative Hair Spa Line',
     image: '/images/salon/skincare-treatment.jpg',
-    desc: 'Cutting-edge hair bonding and restorative hair spa technology that reconstructs damaged hair fibres from within, locking in moisture and sealing split cuticles.',
+    description: 'Cutting-edge hair bonding and restorative hair spa technology that reconstructs damaged hair fibres from within, locking in moisture and sealing split cuticles.',
     category: 'Hair Spa & Damage Repair',
-    origin: 'Schwarzkopf Professional Germany',
-    usedIn: 'Fibre Clinix Therapy & Repairing Hair Spa',
-    badge: 'Bond Reconstruction',
-    features: [
-      'Triple bonding & C21 technology',
-      'Up to 10x stronger hair resilience',
-      'Restores natural bounce and silky touch',
-    ],
+    price: 2100,
+    professional: true,
   },
 ];
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<DbProduct[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedBrand, setSelectedBrand] = useState<string>('All');
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/products');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+        } else {
+          setProducts(FALLBACK_PRODUCTS);
+        }
+      } else {
+        setProducts(FALLBACK_PRODUCTS);
+      }
+    } catch (e) {
+      console.error('Failed to load products from catalogue:', e);
+      setProducts(FALLBACK_PRODUCTS);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Derive unique categories and brands dynamically from current products
+  const categories = ['All', ...Array.from(new Set(products.map((p) => p.category || 'Hair Care').filter(Boolean)))];
+  const brands = ['All', ...Array.from(new Set(products.map((p) => p.brand).filter(Boolean)))];
+
+  const filteredProducts = products.filter((p) => {
+    const matchesCat = selectedCategory === 'All' || (p.category || 'Hair Care') === selectedCategory;
+    const matchesBrand = selectedBrand === 'All' || p.brand === selectedBrand;
+    return matchesCat && matchesBrand;
+  });
+
   return (
     <>
       <Navbar />
@@ -99,43 +129,114 @@ export default function ProductsPage() {
             </p>
           </div>
 
-          {/* Products Grid */}
-          <div className="products-grid">
-            {products.map((product) => (
-              <div key={product.name} className="product-card">
-                <div className="product-card-image">
-                  <span className="product-card-pro">{product.badge}</span>
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                  />
-                </div>
+          {/* Interactive Category & Brand Filter Bar */}
+          <div style={{ marginBottom: '28px', display: 'flex', flexDirection: 'column', gap: '14px', alignItems: 'center' }}>
+            {/* Category Pills */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: selectedCategory === cat ? 'var(--gold-400)' : '#121723',
+                    color: selectedCategory === cat ? '#0A0D14' : '#E2E8F0',
+                    border: selectedCategory === cat ? '1px solid var(--gold-400)' : '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
 
-                <div className="product-card-body">
-                  <div className="product-card-brand">{product.brand}</div>
-                  <h3>{product.name}</h3>
-                  <p>{product.desc}</p>
-
-                  <div style={{ marginTop: '12px', padding: '10px 12px', background: 'var(--dark-850)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-                    <div className="label-text" style={{ marginBottom: '6px' }}>
-                      Highlights &amp; Components:
-                    </div>
-                    {product.features.map((feat) => (
-                      <div key={feat} style={{ fontSize: '11.5px', color: 'var(--text-secondary)', padding: '2px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ color: 'var(--gold-400)', fontWeight: 'bold' }}>✓</span>
-                        <span>{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <span className="badge badge-gold">✦ {product.usedIn}</span>
-                    <span className="badge badge-neutral">{product.origin}</span>
-                  </div>
-                </div>
+            {/* Brand Filter Dropdown */}
+            {brands.length > 2 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                <span>Filter by Brand:</span>
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  style={{
+                    background: '#121723',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '6px',
+                    color: '#FFF',
+                    padding: '6px 12px',
+                    fontSize: '12.5px',
+                  }}
+                >
+                  {brands.map((b) => (
+                    <option key={b} value={b}>
+                      {b === 'All' ? 'All Brands' : b}
+                    </option>
+                  ))}
+                </select>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  ({filteredProducts.length} items)
+                </span>
               </div>
-            ))}
+            )}
           </div>
+
+          {/* Products Grid */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+              Loading professional catalogue...
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
+              No products found matching this filter.
+            </div>
+          ) : (
+            <div className="products-grid">
+              {filteredProducts.map((product) => (
+                <div key={product.id || product.name} className="product-card">
+                  <div className="product-card-image" style={{ position: 'relative', overflow: 'hidden' }}>
+                    <span className="product-card-pro">
+                      {product.professional ? 'Professional Grade' : 'Authentic'}
+                    </span>
+                    <img
+                      src={product.image || '/images/products/o3-shine-glow.jpg'}
+                      alt={product.name}
+                      style={{ width: '100%', height: '220px', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/images/products/o3-shine-glow.jpg';
+                      }}
+                    />
+                  </div>
+
+                  <div className="product-card-body">
+                    <div className="product-card-brand">{product.brand}</div>
+                    <h3>{product.name}</h3>
+                    <p>{product.description || 'Certified salon-grade formulation used in our specialized treatments.'}</p>
+
+                    {product.category && (
+                      <div style={{ marginTop: '12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-gold">✦ {product.category}</span>
+                        {product.price && product.price > 0 && (
+                          <span className="badge badge-neutral" style={{ color: '#4ADE80', fontWeight: 700 }}>
+                            ₹{product.price}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {product.services && product.services.length > 0 && (
+                      <div style={{ marginTop: '12px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                        <b>Used in:</b> {product.services.map((s) => s.service.name).join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
