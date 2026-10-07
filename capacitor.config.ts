@@ -1,12 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.hairmart.salon',
-  appName: 'Hair Mart Studio',
+  appId: 'com.hairmart.admin',
+  appName: 'Hair Mart Admin',
   webDir: 'public',
   server: {
+    url: 'https://hairmart.vercel.app/admin',
     androidScheme: 'https',
-    cleartext: true,
   },
 };
 

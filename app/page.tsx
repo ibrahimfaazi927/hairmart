@@ -2,6 +2,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import ScrollAnimations from '@/components/ScrollAnimations';
+import prisma from '@/lib/prisma';
 
 const PHONE = '0824-4060938';
 const WHATSAPP = '8660549348';
@@ -115,7 +116,18 @@ const salonHighlights = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  let liveReviews: any[] = [];
+  try {
+    liveReviews = await prisma.review.findMany({
+      where: { approved: true },
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+    });
+  } catch (e) {
+    // ignore
+  }
+
   return (
     <>
       <Navbar />
@@ -427,81 +439,49 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── Customer Testimonials / Reviews Preview ──────── */}
-      <section className="section" style={{ background: 'var(--bg-secondary)' }}>
-        <div className="container">
-          <div className="section-header animate-fade-up">
-            <span className="section-subtitle">Client Experiences</span>
-            <h2 className="heading-lg">
-              What Our <span className="text-accent">Guests Say</span>
-            </h2>
-            <div className="section-divider" />
-            <p>Hear from clients who trust Hair Mart with their regular grooming and celebration transformations.</p>
-          </div>
-
-          <div className="reviews-grid">
-            <div className="review-card animate-stagger-item" style={{ transitionDelay: '0ms' }}>
-              <div className="review-stars">
-                {'★★★★★'.split('').map((star, i) => (
-                  <span key={i} className="review-star">{star}</span>
-                ))}
-              </div>
-              <p className="review-text">
-                &ldquo;Clean, professional, and very hygienic salon near Vishal Mart. The stylists pay great attention to detail during haircuts and beard shaping.&rdquo;
-              </p>
-              <div className="review-author">
-                <div className="review-author-avatar">S</div>
-                <div>
-                  <div className="review-author-name">Surathkal Resident</div>
-                  <div className="review-author-label">Regular Client</div>
-                </div>
-              </div>
+      {/* ─── Customer Testimonials / Reviews Preview (Only Real Approved Reviews) ──────── */}
+      {liveReviews.length > 0 && (
+        <section className="section" style={{ background: 'var(--bg-secondary)' }}>
+          <div className="container">
+            <div className="section-header animate-fade-up">
+              <span className="section-subtitle">Client Experiences</span>
+              <h2 className="heading-lg">
+                What Our <span className="text-accent">Guests Say</span>
+              </h2>
+              <div className="section-divider" />
+              <p>Hear from clients who trust Hair Mart with their regular grooming and celebration transformations.</p>
             </div>
 
-            <div className="review-card animate-stagger-item" style={{ transitionDelay: '120ms' }}>
-              <div className="review-stars">
-                {'★★★★★'.split('').map((star, i) => (
-                  <span key={i} className="review-star">{star}</span>
-                ))}
-              </div>
-              <p className="review-text">
-                &ldquo;Loved the hair spa and facial treatments. The atmosphere is very comfortable, and genuine products like O3+ are used.&rdquo;
-              </p>
-              <div className="review-author">
-                <div className="review-author-avatar">M</div>
-                <div>
-                  <div className="review-author-name">Mangalore Client</div>
-                  <div className="review-author-label">Hair &amp; Skin Care</div>
+            <div className="reviews-grid">
+              {liveReviews.map((rev, idx) => (
+                <div key={rev.id} className="review-card animate-stagger-item" style={{ transitionDelay: `${idx * 120}ms` }}>
+                  <div className="review-stars">
+                    {'★'.repeat(rev.rating).split('').map((star, i) => (
+                      <span key={i} className="review-star" style={{ color: '#F6C926' }}>{star}</span>
+                    ))}
+                  </div>
+                  <p className="review-text">
+                    &ldquo;{rev.comment}&rdquo;
+                  </p>
+                  <div className="review-author">
+                    <div className="review-author-avatar">{rev.customerName?.charAt(0) || 'C'}</div>
+                    <div>
+                      <div className="review-author-name">{rev.customerName}</div>
+                      <div className="review-author-label">{rev.serviceName || 'Salon Client'}</div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
-            <div className="review-card animate-stagger-item" style={{ transitionDelay: '240ms' }}>
-              <div className="review-stars">
-                {'★★★★★'.split('').map((star, i) => (
-                  <span key={i} className="review-star">{star}</span>
-                ))}
-              </div>
-              <p className="review-text">
-                &ldquo;One of the best unisex family salons in the Surathkal area. Courteous staff, fair consultation, and relaxing ambience.&rdquo;
-              </p>
-              <div className="review-author">
-                <div className="review-author-avatar">A</div>
-                <div>
-                  <div className="review-author-name">Family Visitor</div>
-                  <div className="review-author-label">Unisex Services</div>
-                </div>
-              </div>
+            <div className="text-center mt-6 animate-fade-up">
+              <Link href="/reviews" className="btn btn-secondary btn-sm">
+                Read More Client Reviews
+              </Link>
             </div>
           </div>
-
-          <div className="text-center mt-6 animate-fade-up">
-            <Link href="/reviews" className="btn btn-secondary btn-sm">
-              Read More Client Reviews
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── Accepted Payment Methods Section ──────── */}
       <section className="section animate-fade-up" style={{

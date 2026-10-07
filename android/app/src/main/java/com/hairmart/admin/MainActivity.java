@@ -1,4 +1,4 @@
-package com.hairmart.salon;
+package com.hairmart.admin;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

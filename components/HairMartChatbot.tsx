@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface Message {
   id: string;
@@ -38,7 +39,9 @@ const FAQ_DATABASE: Record<string, { reply: string; actionLink?: { label: string
 };
 
 export default function HairMartChatbot() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -62,6 +65,11 @@ export default function HairMartChatbot() {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
+
+  // Keep chatbot strictly on public website pages; hide on admin & staff pages
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/staff')) {
+    return null;
+  }
 
   const handleSend = (textToSend?: string) => {
     const query = (textToSend || input).trim();

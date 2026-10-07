@@ -69,22 +69,21 @@ export default function AdminLayout({
     return <>{children}</>;
   }
 
-  // Auth Protection Check
+  // Load custom admin profile if saved, default to Sameer
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('hairmart_admin_auth');
-      if (!stored) {
-        router.push('/admin/login');
-      } else {
+      if (stored) {
         try {
           setAdminUser(JSON.parse(stored));
         } catch {
           setAdminUser({ name: 'Sameer', email: 'Sameer' });
         }
-        setAuthChecked(true);
+      } else {
+        setAdminUser({ name: 'Sameer', email: 'Sameer' });
       }
     }
-  }, [pathname, router]);
+  }, []);
 
   // Update live clock
   useEffect(() => {
@@ -109,11 +108,8 @@ export default function AdminLayout({
     return () => clearInterval(timer);
   }, []);
 
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('hairmart_admin_auth');
-    }
-    router.push('/admin/login');
+  const handleExitAdmin = () => {
+    router.push('/');
   };
 
   // Determine topbar page title
@@ -209,12 +205,12 @@ export default function AdminLayout({
           </Link>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleExitAdmin}
             className="admin-sidebar-link"
-            style={{ width: '100%', color: '#F87171' }}
+            style={{ width: '100%', color: 'var(--text-secondary)' }}
           >
             <span>🚪</span>
-            <span>Logout</span>
+            <span>Exit Admin</span>
           </button>
         </div>
       </aside>
@@ -247,15 +243,6 @@ export default function AdminLayout({
               </div>
             )}
 
-            {/* Notification Bell */}
-            <button
-              className="admin-bell-btn"
-              title="Recent alerts"
-              type="button"
-            >
-              <span>🔔</span>
-              <span className="admin-bell-dot"></span>
-            </button>
 
             {/* Admin User Profile with Dropdown */}
             <div style={{ position: 'relative' }}>
@@ -322,19 +309,22 @@ export default function AdminLayout({
                     }}
                   >
                     <span>⚙️</span>
-                    <span>Admin Settings &amp; Password</span>
+                    <span>Salon Settings</span>
                   </Link>
 
                   <button
                     type="button"
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      handleExitAdmin();
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
                       width: '100%',
                       padding: '9px 14px',
-                      color: '#EF4444',
+                      color: 'var(--text-secondary)',
                       fontSize: '12.5px',
                       background: 'none',
                       border: 'none',
@@ -344,7 +334,7 @@ export default function AdminLayout({
                     }}
                   >
                     <span>🚪</span>
-                    <span>Sign Out</span>
+                    <span>Exit Admin</span>
                   </button>
                 </div>
               )}

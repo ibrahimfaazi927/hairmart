@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Logo from '@/components/Logo';
-import { generateQrSvg } from '@/lib/qrCode';
+import { generateQrSvg, generateQrDataUrl } from '@/lib/qrCode';
 
 interface ReviewItem {
   id: string;
@@ -85,6 +85,18 @@ export default function AdminReviewsPage() {
       navigator.clipboard.writeText(reviewUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  const handleDownloadQr = async () => {
+    try {
+      const dataUrl = await generateQrDataUrl(reviewUrl, 600);
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'hairmart-review-qr.png';
+      a.click();
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -387,18 +399,43 @@ export default function AdminReviewsPage() {
                 display: 'inline-block',
                 flexShrink: 0,
               }}
-              dangerouslySetInnerHTML={{ __html: generateQrSvg(reviewUrl, 130, '#1C2433', '#FFFFFF') }}
+              dangerouslySetInnerHTML={{ __html: generateQrSvg(reviewUrl, 140, '#1C2433', '#FFFFFF') }}
             />
-            <div>
+            <div style={{ flex: 1, minWidth: '260px' }}>
               <div style={{ display: 'inline-block', background: 'rgba(246, 201, 38, 0.15)', color: '#F6C926', fontSize: '10.5px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
-                Counter &amp; Mirror QR
+                Verified Camera-Scannable QR
               </div>
               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#FFF', margin: '0 0 6px 0' }}>
                 Scan to Share Review
               </h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 10px 0', maxWidth: '320px', lineHeight: 1.4 }}>
-                Display this QR standee at reception desk or grooming stations so clients can scan and review in seconds.
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 10px 0', maxWidth: '360px', lineHeight: 1.4 }}>
+                Real standard QR code for counter standee or mirror stickers. Point any phone camera to instantly open the review form.
               </p>
+
+              {/* Destination URL Input */}
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+                  Review Destination URL:
+                </label>
+                <input
+                  type="text"
+                  value={reviewUrl}
+                  onChange={(e) => setReviewUrl(e.target.value)}
+                  placeholder="https://..."
+                  style={{
+                    width: '100%',
+                    maxWidth: '360px',
+                    fontSize: '11.5px',
+                    padding: '6px 10px',
+                    background: '#111520',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '6px',
+                    color: '#F6C926',
+                    fontFamily: 'monospace',
+                  }}
+                />
+              </div>
+
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
@@ -406,7 +443,15 @@ export default function AdminReviewsPage() {
                   className="btn btn-primary btn-sm"
                   style={{ fontSize: '11.5px', padding: '6px 12px', fontWeight: 700 }}
                 >
-                  🖨️ Print Counter Standee
+                  🖨️ Print Standee
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadQr}
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '11px', padding: '6px 10px', color: '#F6C926', borderColor: '#F6C926' }}
+                >
+                  💾 Download QR (PNG)
                 </button>
                 <button
                   type="button"
@@ -416,6 +461,15 @@ export default function AdminReviewsPage() {
                 >
                   {copied ? '✓ Copied' : '🔗 Copy Link'}
                 </button>
+                <a
+                  href={reviewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: '11px', padding: '6px 10px', textDecoration: 'none' }}
+                >
+                  ↗️ Test Link
+                </a>
               </div>
             </div>
           </div>

@@ -26,16 +26,6 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Admin Credential Management State (Default ID: Sameer)
-  const [credForm, setCredForm] = useState({
-    name: 'Sameer',
-    email: 'Sameer',
-    currentPassword: '',
-    newPassword: '',
-  });
-  const [credUpdating, setCredUpdating] = useState(false);
-  const [credSuccess, setCredSuccess] = useState<string | null>(null);
-  const [credError, setCredError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -47,56 +37,7 @@ export default function AdminSettingsPage() {
       })
       .catch(console.error);
 
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('hairmart_admin_auth');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setCredForm((prev: typeof credForm) => ({
-            ...prev,
-            name: parsed.name || 'Sameer',
-            email: parsed.email || 'Sameer',
-          }));
-        } catch {}
-      }
-    }
   }, []);
-
-  const handleUpdateCredentials = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCredUpdating(true);
-    setCredSuccess(null);
-    setCredError(null);
-
-    try {
-      const res = await fetch('/api/auth/update-credentials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          newName: credForm.name,
-          newEmail: credForm.email,
-          currentPassword: credForm.currentPassword,
-          newPassword: credForm.newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setCredSuccess('Admin login ID and password updated successfully!');
-        setCredForm((prev: typeof credForm) => ({ ...prev, currentPassword: '', newPassword: '' }));
-        if (typeof window !== 'undefined' && data.user) {
-          localStorage.setItem('hairmart_admin_auth', JSON.stringify(data.user));
-        }
-        setTimeout(() => setCredSuccess(null), 4000);
-      } else {
-        setCredError(data.error || 'Failed to update admin credentials');
-      }
-    } catch (err: any) {
-      setCredError(err.message || 'Error updating credentials');
-    } finally {
-      setCredUpdating(false);
-    }
-  };
 
   // EZO 58mm Printer State
   const [printerStatus, setPrinterStatus] = useState<'ready' | 'connecting' | 'connected' | 'printing' | 'error'>('ready');
@@ -361,7 +302,7 @@ export default function AdminSettingsPage() {
         <div>
           <h1 className="heading-md" style={{ color: '#FFFFFF' }}>Salon Settings &amp; Branding</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-            Customize your salon profile, contact channels, physical EZO printer, and admin login credentials.
+            Customize your salon profile, contact channels, and physical EZO printer.
           </p>
         </div>
       </div>
@@ -656,99 +597,6 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* 3. Admin Login Credentials & Security Card (With full Edit Option) */}
-          <div className="card-premium" style={{ border: '1px solid rgba(246, 201, 38, 0.35)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h2 className="heading-xs" style={{ margin: 0, color: '#FFFFFF' }}>
-                🔐 Admin Login &amp; Security Credentials
-              </h2>
-              <span style={{ fontSize: '11px', color: '#F6C926', background: 'rgba(246, 201, 38, 0.12)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
-                Role: Master Admin
-              </span>
-            </div>
-
-            <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.5 }}>
-              Manage your master admin identity and credentials. You can update your Login ID / Username and password anytime below.
-            </p>
-
-            {credSuccess && (
-              <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', color: '#4ADE80', padding: '10px 12px', borderRadius: '6px', fontSize: '12px', marginBottom: '14px' }}>
-                ✓ {credSuccess}
-              </div>
-            )}
-
-            {credError && (
-              <div style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #EF4444', color: '#F87171', padding: '10px 12px', borderRadius: '6px', fontSize: '12px', marginBottom: '14px' }}>
-                ⚠️ {credError}
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label">Admin Display Name</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Sameer"
-                value={credForm.name}
-                onChange={(e) => setCredForm({ ...credForm, name: e.target.value })}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Admin Login ID / Username</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. Sameer"
-                value={credForm.email}
-                onChange={(e) => setCredForm({ ...credForm, email: e.target.value })}
-              />
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
-                This is the ID you enter on the login screen. Default: <b style={{ color: '#F6C926' }}>Sameer</b>
-              </span>
-            </div>
-
-            <div className="grid grid-2 gap-4">
-              <div className="form-group">
-                <label className="form-label">Current Password (if changing pass)</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="e.g. Sameer@123"
-                  value={credForm.currentPassword}
-                  onChange={(e) => setCredForm({ ...credForm, currentPassword: e.target.value })}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">New Password (Optional)</label>
-                <input
-                  type="password"
-                  className="form-input"
-                  placeholder="Min 6 chars"
-                  value={credForm.newPassword}
-                  onChange={(e) => setCredForm({ ...credForm, newPassword: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              disabled={credUpdating}
-              onClick={handleUpdateCredentials}
-              className="btn btn-outline btn-sm w-full"
-              style={{
-                marginTop: '12px',
-                padding: '11px',
-                borderColor: '#F6C926',
-                color: '#F6C926',
-                fontWeight: 700,
-                fontSize: '13px',
-              }}
-            >
-              {credUpdating ? 'Updating Credentials...' : '💾 Save Admin Login Credentials'}
-            </button>
-          </div>
 
         </div>
 

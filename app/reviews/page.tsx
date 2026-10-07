@@ -15,65 +15,8 @@ interface ReviewItem {
   staff?: string;
 }
 
-const initialReviews: ReviewItem[] = [
-  {
-    id: 1,
-    name: 'Prashanth K.',
-    service: "Men's Haircut & Beard Sculpting",
-    rating: 5,
-    date: 'Recent Client',
-    comment:
-      'Very clean and modern setup in Surathkal near Vishal Mart. The stylists take their time, understand the exact haircut and beard shape you want, and the hot towel finish is great.',
-  },
-  {
-    id: 2,
-    name: 'Ananya S.',
-    service: 'Hair Spa & Fibre Clinix Therapy',
-    rating: 5,
-    date: 'Recent Client',
-    comment:
-      'I was looking for a good unisex salon around Surathkal and tried their repairing hair spa. The difference in hair texture was noticeable immediately. Authentic products used.',
-  },
-  {
-    id: 3,
-    name: 'Mohammed R.',
-    service: 'Hair Colouring & Head Massage',
-    rating: 5,
-    date: 'Regular Visitor',
-    comment:
-      'Excellent service and polite staff. Ammonia-free grey coverage was done with great care, and the head oil massage was thoroughly relaxing. Highly recommend!',
-  },
-  {
-    id: 4,
-    name: 'Divya M.',
-    service: 'O3+ Shine & Glow Facial',
-    rating: 5,
-    date: 'Recent Client',
-    comment:
-      'The facial suite and steaming equipment are top quality. Single-use O3+ kit was opened right in front of me. The glow lasted for days after the event.',
-  },
-  {
-    id: 5,
-    name: 'Naveen B.',
-    service: 'Family Grooming & Kids Haircut',
-    rating: 5,
-    date: 'Family Client',
-    comment:
-      'Took my 5-year-old son for a haircut. The stylist was extremely patient and gentle. Very family-friendly environment with comfortable seating.',
-  },
-  {
-    id: 6,
-    name: 'Rashmi N.',
-    service: 'Hair Smoothening & Botox',
-    rating: 5,
-    date: 'Recent Client',
-    comment:
-      'Did my hair botox treatment here. My frizzy hair is now completely silky and manageable. Clear explanation of post-treatment care by the team.',
-  },
-];
-
 export default function ReviewsPage() {
-  const [reviewsList, setReviewsList] = useState<ReviewItem[]>(initialReviews);
+  const [reviewsList, setReviewsList] = useState<ReviewItem[]>([]);
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
   const [name, setName] = useState('');
@@ -89,7 +32,7 @@ export default function ReviewsPage() {
     fetch('/api/reviews?approved=true')
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const liveItems: ReviewItem[] = data.map((d: any) => ({
             id: d.id,
             name: d.customerName || 'Anonymous',
@@ -99,10 +42,21 @@ export default function ReviewsPage() {
             comment: d.comment || '',
             staff: d.staffName,
           }));
-          setReviewsList([...liveItems, ...initialReviews]);
+          setReviewsList(liveItems);
         }
       })
       .catch(console.error);
+
+    // Auto-scroll to review submission form if user scanned QR code
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('source') === 'qr' || window.location.hash === '#share-review') {
+        setTimeout(() => {
+          const el = document.getElementById('share-review');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+      }
+    }
   }, []);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -459,36 +413,60 @@ export default function ReviewsPage() {
           </div>
 
           {/* Reviews Grid */}
-          <div className="reviews-grid">
-            {reviewsList.map((rev) => (
-              <div key={rev.id} className="review-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div className="review-stars">
-                    {'★'.repeat(rev.rating).split('').map((star, i) => (
-                      <span key={i} className="review-star" style={{ color: '#F6C926' }}>{star}</span>
-                    ))}
+          {reviewsList.length > 0 ? (
+            <div className="reviews-grid">
+              {reviewsList.map((rev) => (
+                <div key={rev.id} className="review-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div className="review-stars">
+                      {'★'.repeat(rev.rating).split('').map((star, i) => (
+                        <span key={i} className="review-star" style={{ color: '#F6C926' }}>{star}</span>
+                      ))}
+                    </div>
+                    <span className="badge badge-neutral" style={{ fontSize: '10px' }}>{rev.date}</span>
                   </div>
-                  <span className="badge badge-neutral" style={{ fontSize: '10px' }}>{rev.date}</span>
-                </div>
 
-                <p className="review-text" style={{ fontSize: '12.5px', minHeight: '60px' }}>
-                  &ldquo;{rev.comment}&rdquo;
-                </p>
+                  <p className="review-text" style={{ fontSize: '12.5px', minHeight: '60px' }}>
+                    &ldquo;{rev.comment}&rdquo;
+                  </p>
 
-                <div className="review-author" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
-                  <div className="review-author-avatar" style={{ background: '#1F2937', color: '#F6C926', fontWeight: 800 }}>
-                    {rev.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="review-author-name">{rev.name}</div>
-                    <div className="review-author-label">
-                      {rev.service} {rev.staff ? `• Stylist: ${rev.staff}` : ''}
+                  <div className="review-author" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
+                    <div className="review-author-avatar" style={{ background: '#1F2937', color: '#F6C926', fontWeight: 800 }}>
+                      {rev.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="review-author-name">{rev.name}</div>
+                      <div className="review-author-label">
+                        {rev.service} {rev.staff ? `• Stylist: ${rev.staff}` : ''}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className="card-premium text-center"
+              style={{
+                maxWidth: '560px',
+                margin: '0 auto',
+                padding: '48px 24px',
+                border: '1px dashed rgba(246, 201, 38, 0.3)',
+                borderRadius: '16px',
+              }}
+            >
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>⭐</div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>
+                No Customer Reviews Published Yet
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: 1.5 }}>
+                Have you visited Hair Mart Studio in Surathkal? We would love to hear about your experience!
+              </p>
+              <a href="#share-review" className="btn btn-primary btn-sm">
+                Write the First Review ✨
+              </a>
+            </div>
+          )}
         </div>
       </section>
 

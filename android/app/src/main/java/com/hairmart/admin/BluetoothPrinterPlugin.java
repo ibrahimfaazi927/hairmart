@@ -1,4 +1,4 @@
-package com.hairmart.salon;
+package com.hairmart.admin;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
