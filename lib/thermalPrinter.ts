@@ -22,6 +22,8 @@ export interface BillPrintData {
   }>;
   subtotal: number;
   discount: number;
+  tax?: number;
+  taxRate?: number;
   total: number;
   paymentMethod: string;
   notes?: string;
@@ -311,6 +313,12 @@ export function generateEscPosBytes(data: BillPrintData): Uint8Array {
     addLine(discLine);
   }
 
+  if (data.tax && data.tax > 0) {
+    const rateLabel = data.taxRate ? `GST (${data.taxRate}%):` : 'GST:';
+    const gstLine = rateLabel.padEnd(20, ' ') + ('+Rs.' + data.tax).padStart(12, ' ');
+    addLine(gstLine);
+  }
+
   // Grand total in Bold
   addBytes(0x1b, 0x45, 0x01); // Bold ON
   const totalLine = 'TOTAL AMOUNT:'.padEnd(20, ' ') + ('Rs.' + data.total).padStart(12, ' ');
@@ -533,6 +541,15 @@ export function printVia58mmWindow(data: BillPrintData) {
           <div style="display: flex; justify-content: space-between;">
             <span>Discount:</span>
             <span>-₹${data.discount.toLocaleString('en-IN')}</span>
+          </div>`
+              : ''
+          }
+          ${
+            data.tax && data.tax > 0
+              ? `
+          <div style="display: flex; justify-content: space-between;">
+            <span>GST ${data.taxRate ? `(${data.taxRate}%)` : ''}:</span>
+            <span>+₹${data.tax.toLocaleString('en-IN')}</span>
           </div>`
               : ''
           }

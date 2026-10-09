@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       amount,
       subtotal,
       discount,
+      tax,
       method,
       status,
       printReceipt,
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     const finalAmount = parseFloat(amount) || 0;
     const finalSubtotal = subtotal !== undefined ? parseFloat(subtotal) : finalAmount;
     const finalDiscount = discount !== undefined ? parseFloat(discount) : 0;
+    const finalTax = tax !== undefined ? parseFloat(tax) : 0;
     const finalMethod = method || 'cash';
     const finalStatus = status || 'completed';
     const chairName = appointment.chairName || appointment.chair?.name || null;
@@ -88,6 +90,7 @@ export async function POST(request: Request) {
         customerId: appointment.customerId,
         subtotal: finalSubtotal,
         discount: finalDiscount,
+        tax: finalTax,
         total: finalAmount,
         paymentMethod: finalMethod,
         chairName,
@@ -101,6 +104,7 @@ export async function POST(request: Request) {
       update: {
         subtotal: finalSubtotal,
         discount: finalDiscount,
+        tax: finalTax,
         total: finalAmount,
         paymentMethod: finalMethod,
         chairName,

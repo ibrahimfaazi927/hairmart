@@ -225,6 +225,9 @@ export default function AdminBillingPOSPage() {
   const [billItems, setBillItems] = useState<BillItem[]>([]);
 
   const [discount, setDiscount] = useState<number>(0);
+  const [gstRate, setGstRate] = useState<number>(0); // 0 = No GST, 5, 12, 18, 28, or custom
+  const [customGstInput, setCustomGstInput] = useState<string>('');
+  const [isCustomGst, setIsCustomGst] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'other'>('cash');
 
   // Chair selection state
@@ -455,12 +458,17 @@ export default function AdminBillingPOSPage() {
   const handleClearBill = () => {
     setBillItems([]);
     setDiscount(0);
+    setGstRate(0);
+    setCustomGstInput('');
+    setIsCustomGst(false);
     setSelectedChairId(null);
   };
 
   // Calculations with precise numbers
   const subtotal = billItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const totalAmount = Math.max(0, subtotal - discount);
+  const taxableAmount = Math.max(0, subtotal - discount);
+  const taxAmount = gstRate > 0 ? Math.round((taxableAmount * gstRate) / 100) : 0;
+  const totalAmount = Math.max(0, taxableAmount + taxAmount);
 
   // Men & Women service partition helpers
   const isMenService = (s: ServiceItem) => {
@@ -820,6 +828,8 @@ export default function AdminBillingPOSPage() {
         })),
         subtotal,
         discount,
+        tax: taxAmount > 0 ? taxAmount : undefined,
+        taxRate: gstRate > 0 ? gstRate : undefined,
         total: totalAmount,
         paymentMethod,
         notes: billNotes,
@@ -854,6 +864,7 @@ export default function AdminBillingPOSPage() {
       `*Services:*\n${itemList}\n\n` +
       `Subtotal: ₹${subtotal}\n` +
       (discount > 0 ? `Discount: ₹${discount}\n` : '') +
+      (taxAmount > 0 ? `GST (${gstRate}%): +₹${taxAmount}\n` : '') +
       `*Total Amount: ₹${totalAmount}* (${paymentMethod.toUpperCase()})\n\n` +
       `Thank you for visiting HairMart! Keep looking good, always. ✨`;
 
@@ -898,6 +909,7 @@ export default function AdminBillingPOSPage() {
             amount: totalAmount,
             subtotal,
             discount,
+            tax: taxAmount,
             method: paymentMethod,
             status: 'completed',
             printReceipt: printPhysical,
@@ -928,6 +940,8 @@ export default function AdminBillingPOSPage() {
           })),
           subtotal,
           discount,
+          tax: taxAmount > 0 ? taxAmount : undefined,
+          taxRate: gstRate > 0 ? gstRate : undefined,
           total: totalAmount,
           paymentMethod: paymentMethod.toUpperCase(),
           notes: billNotes,
@@ -1002,6 +1016,7 @@ export default function AdminBillingPOSPage() {
       items,
       subtotal: Number(inv.subtotal) || Number(inv.total) || 0,
       discount: Number(inv.discount) || 0,
+      tax: inv.tax !== undefined && inv.tax !== null && Number(inv.tax) > 0 ? Number(inv.tax) : undefined,
       total: Number(inv.total) || 0,
       paymentMethod: (inv.paymentMethod || 'cash').toUpperCase(),
       notes: inv.notes || undefined,
@@ -1078,6 +1093,7 @@ export default function AdminBillingPOSPage() {
       `*Services:*\n${itemList}\n\n` +
       `Subtotal: ₹${printData.subtotal}\n` +
       (printData.discount > 0 ? `Discount: ₹${printData.discount}\n` : '') +
+      (printData.tax && printData.tax > 0 ? `GST${printData.taxRate ? ` (${printData.taxRate}%)` : ''}: +₹${printData.tax}\n` : '') +
       `*Total Amount: ₹${printData.total}* (${printData.paymentMethod})\n\n` +
       `Thank you for visiting HairMart! Keep looking good, always. ✨`;
 
@@ -1770,6 +1786,92 @@ export default function AdminBillingPOSPage() {
                   />
                 </div>
               </div>
+
+              {/* GST (Tax) Control */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingTop: '4px' }}>
+                <div className="pos-summary-line-classic">
+                  <span>GST (Tax)</span>
+                  <span className="pos-num-aligned">
+                    {gstRate > 0 ? `+₹${taxAmount.toLocaleString('en-IN')}` : '₹0 (0%)'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {[
+                    { label: 'None (0%)', rate: 0 },
+                    { label: '5%', rate: 5 },
+                    { label: '12%', rate: 12 },
+                    { label: '18%', rate: 18 },
+                    { label: '28%', rate: 28 },
+                  ].map((preset) => {
+                    const isSelected = !isCustomGst && gstRate === preset.rate;
+                    return (
+                      <button
+                        key={preset.rate}
+                        type="button"
+                        onClick={() => {
+                          setIsCustomGst(false);
+                          setGstRate(preset.rate);
+                          setCustomGstInput('');
+                        }}
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '11px',
+                          borderRadius: '4px',
+                          border: '1px solid',
+                          borderColor: isSelected ? 'var(--gold-400)' : 'rgba(255,255,255,0.12)',
+                          background: isSelected ? 'rgba(212,175,55,0.22)' : 'rgba(255,255,255,0.03)',
+                          color: isSelected ? '#FFFFFF' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontWeight: isSelected ? 700 : 500,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomGst(true)}
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: '11px',
+                      borderRadius: '4px',
+                      border: '1px solid',
+                      borderColor: isCustomGst ? 'var(--gold-400)' : 'rgba(255,255,255,0.12)',
+                      background: isCustomGst ? 'rgba(212,175,55,0.22)' : 'rgba(255,255,255,0.03)',
+                      color: isCustomGst ? '#FFFFFF' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      fontWeight: isCustomGst ? 700 : 500,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    Custom %
+                  </button>
+                </div>
+                {isCustomGst && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Custom Rate:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      placeholder="e.g. 18"
+                      value={customGstInput}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomGstInput(val);
+                        setGstRate(Number(val) || 0);
+                      }}
+                      className="pos-discount-input"
+                      style={{ width: '60px' }}
+                    />
+                    <span style={{ fontSize: '12px', color: '#FFF' }}>%</span>
+                  </div>
+                )}
+              </div>
+
               <div className="pos-summary-total-classic">
                 <span>Total</span>
                 <span className="pos-total-aligned">₹{totalAmount.toLocaleString('en-IN')}</span>
@@ -1919,6 +2021,12 @@ export default function AdminBillingPOSPage() {
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Discount:</span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>-₹{discount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {taxAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>GST ({gstRate}%):</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>+₹{taxAmount.toLocaleString('en-IN')}</span>
                       </div>
                     )}
                     <div className="thermal-receipt-grand-total">
@@ -3158,6 +3266,12 @@ export default function AdminBillingPOSPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>Discount:</span>
                   <span>-₹{previewBill.discount}</span>
+                </div>
+              )}
+              {previewBill.tax && previewBill.tax > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>GST{previewBill.taxRate ? ` (${previewBill.taxRate}%)` : ''}:</span>
+                  <span>+₹{previewBill.tax}</span>
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', borderTop: '1px dashed #000', paddingTop: '6px', marginTop: '6px' }}>
