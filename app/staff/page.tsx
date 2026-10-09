@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { parseSessionsFromRecord } from '@/lib/attendanceSessions';
 
 interface StaffProfile {
   id: string;
@@ -51,6 +52,7 @@ export default function StaffAttendanceTerminalPage() {
       const now = new Date();
       setCurrentTimeStr(
         now.toLocaleTimeString('en-US', {
+          timeZone: 'Asia/Kolkata',
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
@@ -111,8 +113,13 @@ export default function StaffAttendanceTerminalPage() {
         const records: HistoryItem[] = data.attendances || [];
         setHistory(records.slice(0, 10));
 
-        // Find today's record
-        const todayStr = new Date().toISOString().split('T')[0];
+        // Find today's record in salon timezone (Asia/Kolkata)
+        const todayStr = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date());
         const matchToday = records.find((r) => r.date.startsWith(todayStr));
         if (matchToday) {
           setTodayAttendance({
@@ -193,6 +200,21 @@ export default function StaffAttendanceTerminalPage() {
   const isCurrentlyWorking = Boolean(todayAttendance && todayAttendance.checkIn && !todayAttendance.checkOut);
   const isWalkedOutBreak = Boolean(todayAttendance && todayAttendance.checkIn && todayAttendance.checkOut);
 
+  // Parse sessions to get the active / latest session Walk In time
+  const sessions = parseSessionsFromRecord(todayAttendance?.notes, todayAttendance?.checkIn, todayAttendance?.checkOut);
+  const activeSession = sessions.find((s) => s.out === null);
+  const latestSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+  const currentWalkInTime = activeSession
+    ? activeSession.in
+    : latestSession
+    ? latestSession.in
+    : todayAttendance?.checkIn;
+  const currentSessionNum = activeSession
+    ? activeSession.sessionNum
+    : latestSession
+    ? latestSession.sessionNum
+    : 1;
+
   return (
     <div
       style={{
@@ -226,18 +248,26 @@ export default function StaffAttendanceTerminalPage() {
             </h1>
           </div>
 
+          {/* Exit / Return to Admin Panel */}
           <Link
             href="/admin"
             style={{
               fontSize: '12px',
-              color: 'var(--text-muted)',
+              color: '#CBD5E1',
               textDecoration: 'none',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 600,
+              transition: 'background 0.2s',
             }}
           >
-            Admin Panel →
+            <span>⚙️</span>
+            <span>Admin Panel →</span>
           </Link>
         </div>
 
@@ -476,19 +506,35 @@ export default function StaffAttendanceTerminalPage() {
                   : '⏳ Not Walked In Yet'}
               </div>
 
-              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div>
-                  First Walk In:{' '}
-                  <b style={{ color: hasStartedToday ? '#4ADE80' : 'var(--text-muted)' }}>
-                    {todayAttendance?.checkIn || '—'}
+                  {isCurrentlyWorking ? 'Walk In Time:' : 'Latest Walk In:'}{' '}
+                  <b style={{ color: hasStartedToday ? '#4ADE80' : 'var(--text-muted)', fontSize: '15px' }}>
+                    {currentWalkInTime || '—'}
                   </b>
+                  {sessions.length > 1 && (
+                    <span style={{ fontSize: '11px', color: 'var(--gold-400)', marginLeft: '6px', fontWeight: 600 }}>
+                      (Session {currentSessionNum})
+                    </span>
+                  )}
                 </div>
+
+                {sessions.length > 1 && todayAttendance?.checkIn && todayAttendance.checkIn !== currentWalkInTime && (
+                  <div style={{ fontSize: '12px' }}>
+                    First In of Day:{' '}
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {todayAttendance.checkIn}
+                    </span>
+                  </div>
+                )}
+
                 <div>
                   Latest Walk Out:{' '}
                   <b style={{ color: isWalkedOutBreak ? '#FACC15' : 'var(--text-muted)' }}>
                     {todayAttendance?.checkOut || (isCurrentlyWorking ? 'Working Now' : '—')}
                   </b>
                 </div>
+
                 {todayAttendance?.duration && (
                   <div>
                     Working Duration:{' '}

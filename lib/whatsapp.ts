@@ -168,3 +168,100 @@ export async function sendWhatsAppMessage({ phone, type, content }: SendWhatsApp
     whatsappWebUrl: generateWhatsAppWebUrl(cleanPhone, content),
   };
 }
+
+export const OWNER_WHATSAPP_PHONE = '9035959286';
+
+export function createEndOfDayReportMessage({
+  dateStr,
+  totalRevenue,
+  totalBills,
+  cashTotal,
+  cashCount,
+  upiTotal,
+  upiCount,
+  cardTotal,
+  cardCount,
+  menTotal,
+  menCount,
+  womenTotal,
+  womenCount,
+  staffAttendance,
+  billsList,
+  closingNotes,
+}: {
+  dateStr: string;
+  totalRevenue: number;
+  totalBills: number;
+  cashTotal: number;
+  cashCount: number;
+  upiTotal: number;
+  upiCount: number;
+  cardTotal: number;
+  cardCount: number;
+  menTotal: number;
+  menCount: number;
+  womenTotal: number;
+  womenCount: number;
+  staffAttendance?: string[];
+  billsList: Array<{
+    billNo: string;
+    time: string;
+    customerName: string;
+    services: string;
+    amount: number;
+    paymentMethod: string;
+    chairName?: string;
+  }>;
+  closingNotes?: string;
+}): string {
+  const billsText =
+    billsList.length > 0
+      ? billsList
+          .map(
+            (b, i) =>
+              `${i + 1}. #${b.billNo} (${b.time}) - ₹${b.amount} [${(b.paymentMethod || 'cash').toUpperCase()}]\n   👤 ${b.customerName}${
+                b.chairName ? ` • 🪑 ${b.chairName}` : ''
+              }\n   ✂️ ${b.services}`
+          )
+          .join('\n\n')
+      : 'No bills generated today.';
+
+  const staffText =
+    staffAttendance && staffAttendance.length > 0
+      ? `\n👔 *Staff On Duty Today:*\n${staffAttendance.map((s) => `• ${s}`).join('\n')}\n`
+      : '';
+
+  const notesText =
+    closingNotes && closingNotes.trim()
+      ? `\n📝 *Closing Remarks / Safe Handover:*\n${closingNotes.trim()}\n`
+      : '';
+
+  return (
+`💈 *HAIR MART UNISEX SALON — END OF DAY REPORT* 💈
+📅 *Date:* ${dateStr}
+📍 *Location:* Surathkal Cross, Mangalore
+
+━━━━━━━━━━━━━━━━━━━━━
+💰 *COLLECTIONS & REVENUE SUMMARY*
+━━━━━━━━━━━━━━━━━━━━━
+💵 *Total Collections:* ₹${totalRevenue.toLocaleString('en-IN')}
+🧾 *Total Bills Count:* ${totalBills} bills
+
+💳 *Payment Mode Breakdown:*
+• *Cash:* ₹${cashTotal.toLocaleString('en-IN')} (${cashCount} bills)
+• *UPI / QR:* ₹${upiTotal.toLocaleString('en-IN')} (${upiCount} bills)
+• *Card:* ₹${cardTotal.toLocaleString('en-IN')} (${cardCount} bills)
+
+✂️ *Salon Section Breakdown:*
+• *Men's Section:* ₹${menTotal.toLocaleString('en-IN')} (${menCount} bills)
+• *Women's Section:* ₹${womenTotal.toLocaleString('en-IN')} (${womenCount} bills)
+${staffText}${notesText}
+━━━━━━━━━━━━━━━━━━━━━
+📋 *ALL BILLS REGISTER TODAY (${billsList.length}):*
+━━━━━━━━━━━━━━━━━━━━━
+${billsText}
+
+━━━━━━━━━━━━━━━━━━━━━
+✨ *Daily salon audit report generated automatically by Hair Mart POS.*`
+  );
+}

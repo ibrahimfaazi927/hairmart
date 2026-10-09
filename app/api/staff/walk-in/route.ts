@@ -128,6 +128,7 @@ export async function POST(request: Request) {
         },
       },
       data: {
+        // Keep original checkIn (first walk-in of the day) — never overwrite it
         checkOut: null, // Clear checkOut because they are now actively back on duty!
         status: 'Present',
         duration: durationSoFar,

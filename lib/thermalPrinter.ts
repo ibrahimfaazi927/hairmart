@@ -6,6 +6,9 @@
  * 3. 58mm Native Browser Print Window (POS-58 driver fallback)
  */
 
+import QRCode from 'qrcode';
+import { generateQrSvg } from './qrCode';
+
 export interface BillPrintData {
   billNo: string;
   date: string;
@@ -22,6 +25,76 @@ export interface BillPrintData {
   total: number;
   paymentMethod: string;
   notes?: string;
+}
+
+/**
+ * Exact Hair Mart Salon UPI credentials extracted from physical EZO receipt:
+ * Payee VPA: Q085073724@ybl (Yes Bank / PhonePe merchant)
+ * Payee Name: Hair Mart Unisex Salon
+ */
+export const HAIR_MART_UPI_VPA = 'Q085073724@ybl';
+export const HAIR_MART_UPI_NAME = 'Hair Mart Unisex Salon';
+
+/**
+ * Generate standard UPI intent URL matching physical receipt:
+ * upi://pay?pa=Q085073724@ybl&pn=Hair Mart Unisex Salon&am=100&cu=INR&tn=9027468798
+ */
+export function generateHairMartUpiUrl(total: number, billNo: string): string {
+  const cleanBillNo = billNo ? billNo.replace(/[^a-zA-Z0-9-]/g, '') : 'BILL';
+  return `upi://pay?pa=${HAIR_MART_UPI_VPA}&pn=${encodeURIComponent(HAIR_MART_UPI_NAME)}&am=${total}&cu=INR&tn=${cleanBillNo}`;
+}
+
+/**
+ * Generate ESC/POS Raster Bit Image (GS v 0 0) for QR code
+ * 384 dots wide (standard 58mm thermal printable width)
+ * Pre-centered with zero-padding on both margins for 100% printer firmware compatibility
+ */
+export function generateEscPosRasterQrBytes(text: string, scale = 5): number[] {
+  try {
+    const qr = QRCode.create(text, { errorCorrectionLevel: 'M' });
+    const qrSize = qr.modules.size;
+    const margin = 2; // quiet zone
+    const totalModules = qrSize + margin * 2;
+    const imgWidth = totalModules * scale; // in dots
+    const imgHeight = imgWidth;
+
+    const targetWidthDots = 384; // 58mm standard dot width (48mm @ 203 DPI)
+    const leftPaddingDots = Math.max(0, Math.floor((targetWidthDots - imgWidth) / 2));
+    const bytesWidth = Math.ceil(targetWidthDots / 8); // 48 bytes per raster row
+
+    const bytes: number[] = [];
+    // GS v 0 0 xL xH yL yH
+    const xL = bytesWidth % 256;
+    const xH = Math.floor(bytesWidth / 256);
+    const yL = imgHeight % 256;
+    const yH = Math.floor(imgHeight / 256);
+
+    bytes.push(0x1d, 0x76, 0x30, 0x00, xL, xH, yL, yH);
+
+    for (let y = 0; y < imgHeight; y++) {
+      const modY = Math.floor(y / scale) - margin;
+      for (let byteX = 0; byteX < bytesWidth; byteX++) {
+        let b = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          const dotX = byteX * 8 + bit;
+          const relX = dotX - leftPaddingDots;
+          if (relX >= 0 && relX < imgWidth) {
+            const modX = Math.floor(relX / scale) - margin;
+            if (modY >= 0 && modY < qrSize && modX >= 0 && modX < qrSize) {
+              if (qr.modules.get(modY, modX)) {
+                b |= (1 << (7 - bit));
+              }
+            }
+          }
+        }
+        bytes.push(b);
+      }
+    }
+    return bytes;
+  } catch (err) {
+    console.error('Failed to generate ESC/POS QR raster:', err);
+    return [];
+  }
 }
 
 // Global active connections
@@ -251,8 +324,23 @@ export function generateEscPosBytes(data: BillPrintData): Uint8Array {
 
   addLine('--------------------------------');
 
+  // Dynamic UPI Payment QR Code Section (Accurately extracted from Hair Mart EZO receipt)
+  addBytes(0x1b, 0x61, 0x01); // Center align
+  addLine('Thank You! Visit Again!');
+  addLine('Powered by Ezo');
+
+  // Generate UPI QR raster image centered for 58mm paper (384 dots)
+  const upiUrl = generateHairMartUpiUrl(data.total, data.billNo);
+  const qrRasterBytes = generateEscPosRasterQrBytes(upiUrl, 5);
+  if (qrRasterBytes.length > 0) {
+    addBytes(...qrRasterBytes);
+    addLine();
+  }
+
+  addLine(`Scan To Pay Rs. ${data.total} /-`);
+  addLine('--------------------------------');
+
   // Footer - Center Align
-  addBytes(0x1b, 0x61, 0x01);
   addLine('Thank you for choosing Hair Mart!');
   addLine('Look Stylish. Feel Confident.');
   addLine('Follow us on Instagram: @hairmart');
@@ -348,6 +436,9 @@ export function printVia58mmWindow(data: BillPrintData) {
     `
     )
     .join('');
+
+  const upiUrl = generateHairMartUpiUrl(data.total, data.billNo);
+  const upiQrSvg = generateQrSvg(upiUrl, 140);
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -456,9 +547,24 @@ export function printVia58mmWindow(data: BillPrintData) {
 
         <div class="divider"></div>
 
+        <!-- Dynamic Payment QR Code -->
+        <div class="text-center" style="margin: 6px 0;">
+          <div style="font-size: 10px; font-weight: bold;">Thank You! Visit Again!</div>
+          <div style="font-size: 9px; color: #555;">Powered by Ezo</div>
+          <div style="display: flex; justify-content: center; margin: 6px auto;">
+            ${upiQrSvg}
+          </div>
+          <div style="font-weight: 900; font-size: 11.5px; letter-spacing: 0.3px;">Scan To Pay Rs. ${data.total} /-</div>
+          <div style="font-size: 8.5px; color: #666; margin-top: 2px;">UPI: ${HAIR_MART_UPI_VPA}</div>
+        </div>
+
+        <div class="divider"></div>
+
         <div class="text-center" style="font-size: 9.5px;">
-          <div><b>Thank you for visiting HairMart!</b></div>
-          <div>Keep looking good, always.</div>
+          <div><b>Thank you for choosing Hair Mart!</b></div>
+          <div>Look Stylish. Feel Confident.</div>
+          <div>Follow us on Instagram: @hairmart</div>
+          <div>Scan QR for Reviews &amp; Offers</div>
         </div>
       </body>
     </html>

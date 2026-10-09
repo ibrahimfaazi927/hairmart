@@ -10,7 +10,12 @@ import {
   generateTestSlipBytes,
   sendRawBytesToPrinter,
   printVia58mmWindow,
+  generateHairMartUpiUrl,
+  HAIR_MART_UPI_VPA,
+  type BillPrintData,
 } from '@/lib/thermalPrinter';
+import { generateQrSvg } from '@/lib/qrCode';
+import { OWNER_WHATSAPP_PHONE } from '@/lib/whatsapp';
 
 interface ServiceItem {
   id: string;
@@ -237,6 +242,23 @@ export default function AdminBillingPOSPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
+  // ── Previous Bills & Reprint State ──
+  const [showReprintModal, setShowReprintModal] = useState(false);
+  const [reprintList, setReprintList] = useState<any[]>([]);
+  const [reprintLoading, setReprintLoading] = useState(false);
+  const [reprintSearch, setReprintSearch] = useState('');
+  const [reprintFilter, setReprintFilter] = useState<'all' | 'today' | 'cash' | 'upi'>('all');
+  const [reprintNotice, setReprintNotice] = useState<string | null>(null);
+  const [lastCompletedBill, setLastCompletedBill] = useState<BillPrintData | null>(null);
+  const [previewBill, setPreviewBill] = useState<BillPrintData | null>(null);
+
+  // ── End of Day (EOD) Owner WhatsApp State ──
+  const [showEodModal, setShowEodModal] = useState(false);
+  const [eodLoading, setEodLoading] = useState(false);
+  const [eodData, setEodData] = useState<any>(null);
+  const [eodClosingNotes, setEodClosingNotes] = useState('');
+  const [eodCopyNotice, setEodCopyNotice] = useState<string | null>(null);
+
   // New Client Modal (Phone only required)
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [newClientForm, setNewClientForm] = useState({
@@ -283,6 +305,17 @@ export default function AdminBillingPOSPage() {
         const chairData = await chairRes.json();
         setChairs(chairData.filter((c: ChairOption) => c.active));
       }
+
+      // Pre-load latest invoice for instant 1-click reprint
+      try {
+        const invRes = await fetch('/api/invoices?limit=1');
+        if (invRes.ok) {
+          const invData = await invRes.json();
+          if (Array.isArray(invData) && invData.length > 0) {
+            setLastCompletedBill(convertInvoiceToPrintData(invData[0]));
+          }
+        }
+      } catch (e) {}
     } catch (err) {
       console.error('Failed to load POS data:', err);
     }
@@ -882,6 +915,25 @@ export default function AdminBillingPOSPage() {
           triggerWhatsAppBill();
         }
 
+        const billSnapshot: BillPrintData = {
+          billNo: generatedBillNo,
+          date: generatedDate,
+          time: generatedTime,
+          customerName: isWalkInAnonymous ? 'Walk-in Guest' : selectedCustomer.name,
+          customerPhone: isWalkInAnonymous ? undefined : selectedCustomer.phone,
+          items: billItems.map((b) => ({
+            name: b.name,
+            quantity: b.quantity,
+            price: b.price,
+          })),
+          subtotal,
+          discount,
+          total: totalAmount,
+          paymentMethod: paymentMethod.toUpperCase(),
+          notes: billNotes,
+        };
+        setLastCompletedBill(billSnapshot);
+
         setSuccessNotice(`Bill #${generatedBillNo} generated successfully!`);
         setShowGenerateModal(false);
         handleClearBill();
@@ -896,6 +948,189 @@ export default function AdminBillingPOSPage() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // ── Convert Stored Invoice to Universal Thermal Print Data ──
+  const convertInvoiceToPrintData = (inv: any): BillPrintData => {
+    let items: Array<{ name: string; quantity: number; price: number }> = [];
+    if (inv.itemsJson) {
+      try {
+        const parsed = JSON.parse(inv.itemsJson);
+        if (Array.isArray(parsed)) {
+          items = parsed.map((it: any) => ({
+            name: it.name || 'Salon Service',
+            quantity: Number(it.quantity) || 1,
+            price: Number(it.price) || 0,
+          }));
+        }
+      } catch (e) {}
+    }
+    if (items.length === 0 && inv.appointment?.services) {
+      items = inv.appointment.services.map((s: any) => ({
+        name: s.service?.name || s.name || 'Salon Service',
+        quantity: Number(s.quantity) || 1,
+        price: Number(s.price) || 0,
+      }));
+    }
+    if (items.length === 0) {
+      items = [{ name: 'Salon Service', quantity: 1, price: Number(inv.total) || 0 }];
+    }
+
+    const d = new Date(inv.createdAt);
+    const formattedDate = d.toLocaleDateString('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const formattedTime = inv.appointment?.time || d.toLocaleTimeString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const custName = inv.customer?.name || inv.appointment?.customerName || 'Walk-in Guest';
+    const custPhone = inv.customer?.phone || inv.appointment?.customerPhone || undefined;
+
+    return {
+      billNo: inv.invoiceNumber || 'HM-BILL',
+      date: formattedDate,
+      time: formattedTime,
+      customerName: custName,
+      customerPhone: custPhone === 'Not Provided' ? undefined : custPhone,
+      items,
+      subtotal: Number(inv.subtotal) || Number(inv.total) || 0,
+      discount: Number(inv.discount) || 0,
+      total: Number(inv.total) || 0,
+      paymentMethod: (inv.paymentMethod || 'cash').toUpperCase(),
+      notes: inv.notes || undefined,
+    };
+  };
+
+  // ── Open Previous Bills Modal ──
+  const openReprintModal = async (searchQuery = '') => {
+    setShowReprintModal(true);
+    setReprintLoading(true);
+    setReprintNotice(null);
+    try {
+      const q = searchQuery ? `&search=${encodeURIComponent(searchQuery)}` : '';
+      const res = await fetch(`/api/invoices?limit=50${q}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReprintList(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('Failed to load previous bills:', e);
+    } finally {
+      setReprintLoading(false);
+    }
+  };
+
+  // ── Thermal Reprint Handler (Universal EZO 58mm) ──
+  const handleReprintInvoice = async (invOrPrintData: any) => {
+    try {
+      const printData: BillPrintData = invOrPrintData.items
+        ? (invOrPrintData as BillPrintData)
+        : convertInvoiceToPrintData(invOrPrintData);
+
+      setReprintNotice(`Printing Bill #${printData.billNo}...`);
+      await printBillToEzoPrinter(printData);
+      setReprintNotice(`✅ Bill #${printData.billNo} sent to 58mm printer!`);
+      setTimeout(() => setReprintNotice(null), 3500);
+    } catch (err: any) {
+      console.error('Reprint failed:', err);
+      alert('Reprint failed: ' + (err.message || 'Unknown error'));
+    }
+  };
+
+  // ── Quick Reprint Last Generated Bill ──
+  const handleQuickReprintLastBill = async () => {
+    if (lastCompletedBill) {
+      await handleReprintInvoice(lastCompletedBill);
+    } else {
+      openReprintModal();
+    }
+  };
+
+  // ── WhatsApp Previous Bill ──
+  const handleWhatsAppPreviousBill = (inv: any) => {
+    const printData = convertInvoiceToPrintData(inv);
+    if (!printData.customerPhone || printData.customerPhone === 'Not Provided') {
+      alert('Cannot send WhatsApp: Customer contact number was not provided for this bill.');
+      return;
+    }
+    const phone = printData.customerPhone.replace(/[^0-9]/g, '');
+    if (!phone) {
+      alert('Valid phone number not found.');
+      return;
+    }
+    const itemList = printData.items
+      .map((item) => `• ${item.name} x${item.quantity} = ₹${item.price * item.quantity}`)
+      .join('\n');
+
+    const message =
+      `*HAIR MART STUDIO — SURATHKAL*\n` +
+      `*(DUPLICATE / REPRINT BILL)*\n` +
+      `Bill No: ${printData.billNo}\n` +
+      `Date: ${printData.date} ${printData.time}\n` +
+      `Customer: ${printData.customerName}\n\n` +
+      `*Services:*\n${itemList}\n\n` +
+      `Subtotal: ₹${printData.subtotal}\n` +
+      (printData.discount > 0 ? `Discount: ₹${printData.discount}\n` : '') +
+      `*Total Amount: ₹${printData.total}* (${printData.paymentMethod})\n\n` +
+      `Thank you for visiting HairMart! Keep looking good, always. ✨`;
+
+    const url = `https://wa.me/${phone.startsWith('91') ? phone : '91' + phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  // ── End of Day (EOD) Report Handlers ──
+  const openEodModal = async () => {
+    setShowEodModal(true);
+    setEodLoading(true);
+    setEodCopyNotice(null);
+    try {
+      const res = await fetch('/api/reports/end-of-day');
+      if (res.ok) {
+        const json = await res.json();
+        setEodData(json);
+      }
+    } catch (e) {
+      console.error('Failed to load EOD data:', e);
+    } finally {
+      setEodLoading(false);
+    }
+  };
+
+  const handleSendEodToOwner = async () => {
+    if (!eodData) return;
+    try {
+      if (eodClosingNotes.trim()) {
+        const res = await fetch('/api/reports/end-of-day', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ closingNotes: eodClosingNotes }),
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          window.open(updated.whatsappUrl, '_blank');
+          setShowEodModal(false);
+          return;
+        }
+      }
+      window.open(eodData.whatsappUrl, '_blank');
+      setShowEodModal(false);
+    } catch (e: any) {
+      alert('Could not open WhatsApp for owner: ' + e.message);
+    }
+  };
+
+  const handleCopyEodReport = () => {
+    if (!eodData?.reportMessage) return;
+    navigator.clipboard.writeText(eodData.reportMessage);
+    setEodCopyNotice('✅ EOD Report copied to clipboard! Paste directly into WhatsApp.');
+    setTimeout(() => setEodCopyNotice(null), 4000);
   };
 
   return (
@@ -919,6 +1154,72 @@ export default function AdminBillingPOSPage() {
           <span style={{ fontWeight: 600 }}>{successNotice}</span>
         </div>
       )}
+
+      {/* POS Top Utility Bar: Quick Reprint & Previous Bills & Hardware Status */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(20, 24, 33, 0.95), rgba(13, 17, 26, 0.95))',
+          border: '1px solid rgba(212, 175, 55, 0.22)',
+          borderRadius: '12px',
+          padding: '12px 18px',
+          marginBottom: '16px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Send End of Day Bills to Owner WhatsApp Button */}
+          <button
+            type="button"
+            onClick={openEodModal}
+            style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.08))',
+              border: '1px solid rgba(34, 197, 94, 0.5)',
+              color: '#4ADE80',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            }}
+            title="Compile all today's bills, revenue, and staff attendance to send to owner WhatsApp (9035959286)"
+          >
+            <span>📲</span>
+            <span>Send EOD to Owner (WhatsApp)</span>
+          </button>
+
+          {/* Manage Services Button */}
+          <button
+            type="button"
+            onClick={() => setShowServiceManager(true)}
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#CBD5E1',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              fontWeight: 500,
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>📋</span>
+            <span>Manage Services</span>
+          </button>
+        </div>
+
+
+      </div>
 
       {/* POS Layout: Services Grid (Left) + Current Bill with Customer Search (Right) */}
       <div className="pos-layout-grid">
@@ -1113,16 +1414,58 @@ export default function AdminBillingPOSPage() {
           <div className="pos-current-bill-card">
             {/* ── TOP OF CURRENT BILL: Customer Search Bar & Client Selection ── */}
             <div className="pos-bill-client-header">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span className="pos-bill-title">Current Bill</span>
-                <button
-                  type="button"
-                  className="pos-bill-clear-btn"
-                  onClick={handleClearBill}
-                  title="Clear items in cart"
-                >
-                  Clear All
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="pos-bill-title">Current Bill</span>
+                  {lastCompletedBill && (
+                    <button
+                      type="button"
+                      onClick={handleQuickReprintLastBill}
+                      style={{
+                        background: 'rgba(212, 175, 55, 0.12)',
+                        border: '1px solid rgba(212, 175, 55, 0.3)',
+                        color: 'var(--gold-400)',
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                      title="Quickly reprint the last generated bill"
+                    >
+                      ↺ Last #{lastCompletedBill.billNo.slice(-6)}
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => openReprintModal()}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#E2E8F0',
+                      fontSize: '11px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    title="Find and reprint any previous bill"
+                  >
+                    🧾 Previous Bills
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-bill-clear-btn"
+                    onClick={handleClearBill}
+                    title="Clear items in cart"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
               {/* Customer Search Bar directly in Current Bill */}
@@ -1584,6 +1927,26 @@ export default function AdminBillingPOSPage() {
                     </div>
                     <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
                       Payment: {paymentMethod.toUpperCase()} (Recorded)
+                    </div>
+                  </div>
+
+                  {/* Dynamic UPI Payment QR Code */}
+                  <div style={{ textAlign: 'center', borderTop: '1px dashed #999', paddingTop: '10px', marginTop: '8px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#333' }}>Scan & Pay via UPI</div>
+                    <div
+                      style={{ display: 'flex', justifyContent: 'center', margin: '6px 0 4px' }}
+                      dangerouslySetInnerHTML={{
+                        __html: generateQrSvg(
+                          generateHairMartUpiUrl(totalAmount, generatedBillNo),
+                          120
+                        ),
+                      }}
+                    />
+                    <div style={{ fontWeight: 900, fontSize: '10.5px', letterSpacing: '0.3px', color: '#000' }}>
+                      Scan To Pay ₹{totalAmount.toLocaleString('en-IN')} /-
+                    </div>
+                    <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                      UPI: {HAIR_MART_UPI_VPA}
                     </div>
                   </div>
 
@@ -2307,6 +2670,949 @@ export default function AdminBillingPOSPage() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ═══════════════════════════════════════════════════════════════
+          REPRINT PREVIOUS BILLS MODAL
+         ═══════════════════════════════════════════════════════════════ */}
+      {showReprintModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowReprintModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: '#0B0F17',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              borderRadius: '16px',
+              maxWidth: '880px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#0E131E',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>🧾</span>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#FFF' }}>
+                    Reprint Previous Bills &amp; Invoices
+                  </h2>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    Lookup past salon bills to reprint 58mm thermal receipts or send digital WhatsApp bills
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowReprintModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: '#CBD5E1',
+                  borderRadius: '8px',
+                  width: '34px',
+                  height: '34px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Notice Banner */}
+            {reprintNotice && (
+              <div
+                style={{
+                  background: 'rgba(34, 197, 94, 0.15)',
+                  borderBottom: '1px solid #22C55E',
+                  color: '#4ADE80',
+                  padding: '10px 24px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>ℹ️</span>
+                <span>{reprintNotice}</span>
+              </div>
+            )}
+
+            {/* Search & Filter Bar */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                background: '#090D14',
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
+                  🔍
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search by Bill #, Customer Name, or Phone..."
+                  value={reprintSearch}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setReprintSearch(val);
+                    openReprintModal(val);
+                  }}
+                  style={{
+                    width: '100%',
+                    background: '#121723',
+                    border: '1px solid rgba(212, 175, 55, 0.25)',
+                    borderRadius: '8px',
+                    padding: '10px 14px 10px 36px',
+                    color: '#FFF',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Filter Tabs */}
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {(['all', 'today', 'cash', 'upi'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setReprintFilter(tab)}
+                    style={{
+                      background: reprintFilter === tab ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                      border: `1px solid ${reprintFilter === tab ? 'var(--gold-400)' : 'rgba(255, 255, 255, 0.1)'}`,
+                      color: reprintFilter === tab ? 'var(--gold-400)' : '#CBD5E1',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: reprintFilter === tab ? 700 : 500,
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {tab === 'all' ? 'All Bills' : tab === 'today' ? "Today's Bills" : tab.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Invoices List */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '20px 24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              {reprintLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                  ⏳ Loading salon bills...
+                </div>
+              ) : reprintList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧾</div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: '#E2E8F0' }}>No bills found</div>
+                  <div style={{ fontSize: '13px', marginTop: '4px' }}>
+                    {reprintSearch ? `No invoices match "${reprintSearch}".` : 'No bills have been completed yet.'}
+                  </div>
+                </div>
+              ) : (
+                reprintList
+                  .filter((inv) => {
+                    if (reprintFilter === 'today') {
+                      const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+                      return inv.createdAt?.startsWith(todayStr);
+                    }
+                    if (reprintFilter === 'cash') return (inv.paymentMethod || '').toLowerCase() === 'cash';
+                    if (reprintFilter === 'upi') return (inv.paymentMethod || '').toLowerCase() === 'upi';
+                    return true;
+                  })
+                  .map((inv) => {
+                    const printData = convertInvoiceToPrintData(inv);
+                    const itemsSummary = printData.items.map((it) => `${it.name} (x${it.quantity})`).join(', ');
+
+                    return (
+                      <div
+                        key={inv.id}
+                        style={{
+                          background: '#121723',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          borderRadius: '10px',
+                          padding: '16px 18px',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '16px',
+                          transition: 'border-color 0.15s ease',
+                        }}
+                      >
+                        {/* Bill Info */}
+                        <div style={{ flex: 1, minWidth: '260px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontWeight: 800,
+                                fontSize: '13px',
+                                color: 'var(--gold-400)',
+                                background: 'rgba(212, 175, 55, 0.12)',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {printData.billNo}
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              📅 {printData.date} • {printData.time}
+                            </span>
+                            {inv.chairName && (
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  background: 'rgba(255, 255, 255, 0.06)',
+                                  color: '#CBD5E1',
+                                }}
+                              >
+                                🪑 {inv.chairName} ({inv.section || 'General'})
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 700, color: '#FFF', fontSize: '14px' }}>
+                              👤 {printData.customerName}
+                            </span>
+                            {printData.customerPhone && (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                                📞 {printData.customerPhone}
+                              </span>
+                            )}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: 'var(--text-secondary)',
+                              maxWidth: '450px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={itemsSummary}
+                          >
+                            ✂️ {itemsSummary}
+                          </div>
+                        </div>
+
+                        {/* Amount & Actions */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '17px', fontWeight: 800, color: '#FFF' }}>
+                              ₹{printData.total.toLocaleString('en-IN')}
+                            </div>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                textTransform: 'uppercase',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontWeight: 700,
+                                background:
+                                  printData.paymentMethod === 'UPI'
+                                    ? 'rgba(34, 197, 94, 0.15)'
+                                    : printData.paymentMethod === 'CASH'
+                                    ? 'rgba(212, 175, 55, 0.15)'
+                                    : 'rgba(59, 130, 246, 0.15)',
+                                color:
+                                  printData.paymentMethod === 'UPI'
+                                    ? '#4ADE80'
+                                    : printData.paymentMethod === 'CASH'
+                                    ? 'var(--gold-400)'
+                                    : '#60A5FA',
+                              }}
+                            >
+                              {printData.paymentMethod}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            {/* Primary 1-Click Thermal Reprint Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleReprintInvoice(inv)}
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(212, 175, 55, 0.1))',
+                                border: '1px solid rgba(212, 175, 55, 0.5)',
+                                color: 'var(--gold-400)',
+                                padding: '8px 14px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title="Print directly to paired 58mm thermal billing printer"
+                            >
+                              <span>🖨️</span>
+                              <span>Reprint Bill</span>
+                            </button>
+
+                            {/* Preview & Print */}
+                            <button
+                              type="button"
+                              onClick={() => setPreviewBill(printData)}
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                color: '#CBD5E1',
+                                padding: '8px 10px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                              title="Preview formatted receipt"
+                            >
+                              👁️
+                            </button>
+
+                            {/* WhatsApp Button */}
+                            {printData.customerPhone && (
+                              <button
+                                type="button"
+                                onClick={() => handleWhatsAppPreviousBill(inv)}
+                                style={{
+                                  background: 'rgba(34, 197, 94, 0.15)',
+                                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                                  color: '#4ADE80',
+                                  padding: '8px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                }}
+                                title="Send digital duplicate bill via WhatsApp"
+                              >
+                                💬
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                background: '#0E131E',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                💡 Tip: Reprinting sends ESC/POS command directly to EZO 58mm printer with no duplicate charges.
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReprintModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#FFF',
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          RECEIPT PREVIEW & DIRECT PRINT MODAL
+         ═══════════════════════════════════════════════════════════════ */}
+      {previewBill && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.88)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreviewBill(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#FFF',
+              color: '#000',
+              borderRadius: '8px',
+              maxWidth: '380px',
+              width: '100%',
+              padding: '24px 20px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8)',
+              fontFamily: "'Courier New', Courier, monospace",
+              fontSize: '12px',
+              lineHeight: 1.4,
+            }}
+          >
+            {/* 58mm Thermal Receipt Layout Preview */}
+            <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '12px', marginBottom: '12px' }}>
+              <div style={{ fontWeight: 900, fontSize: '16px', letterSpacing: '1px' }}>HAIR MART</div>
+              <div style={{ fontSize: '11px', fontWeight: 700 }}>UNISEX FAMILY SALON</div>
+              <div style={{ fontSize: '10px' }}>Near Vishal Mart, Surathkal</div>
+              <div style={{ fontSize: '10px' }}>Tel: 0824-4060938 | Mob: 8660549348</div>
+              <div style={{ fontSize: '10px', marginTop: '4px', fontWeight: 800 }}>*** DUPLICATE / REPRINT ***</div>
+            </div>
+
+            <div style={{ fontSize: '11px', marginBottom: '10px' }}>
+              <div><b>Bill No:</b> {previewBill.billNo}</div>
+              <div><b>Date:</b> {previewBill.date} {previewBill.time}</div>
+              <div><b>Customer:</b> {previewBill.customerName}</div>
+              {previewBill.customerPhone && <div><b>Phone:</b> {previewBill.customerPhone}</div>}
+            </div>
+
+            <div style={{ borderTop: '1px dashed #000', borderBottom: '1px dashed #000', padding: '8px 0', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginBottom: '4px' }}>
+                <span>Item</span>
+                <span>Qty x Rate = Amt</span>
+              </div>
+              {previewBill.items.map((it, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
+                  <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</span>
+                  <span>{it.quantity} x {it.price} = ₹{it.quantity * it.price}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: '11px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Subtotal:</span>
+                <span>₹{previewBill.subtotal}</span>
+              </div>
+              {previewBill.discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Discount:</span>
+                  <span>-₹{previewBill.discount}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '14px', borderTop: '1px dashed #000', paddingTop: '6px', marginTop: '6px' }}>
+                <span>TOTAL AMOUNT:</span>
+                <span>₹{previewBill.total}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                <span>Payment Mode:</span>
+                <span style={{ fontWeight: 700 }}>{previewBill.paymentMethod}</span>
+              </div>
+            </div>
+
+            {/* Dynamic UPI Payment QR Code (Accurately extracted from Hair Mart EZO receipt) */}
+            <div style={{ textAlign: 'center', borderTop: '1px dashed #000', paddingTop: '10px', marginTop: '10px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 800 }}>Thank You! Visit Again!</div>
+              <div style={{ fontSize: '9px', color: '#666' }}>Powered by Ezo</div>
+              <div
+                style={{ display: 'flex', justifyContent: 'center', margin: '8px 0 4px' }}
+                dangerouslySetInnerHTML={{
+                  __html: generateQrSvg(
+                    generateHairMartUpiUrl(previewBill.total, previewBill.billNo),
+                    130
+                  ),
+                }}
+              />
+              <div style={{ fontWeight: 900, fontSize: '12px', letterSpacing: '0.3px' }}>
+                Scan To Pay Rs. {previewBill.total} /-
+              </div>
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                UPI: {HAIR_MART_UPI_VPA} (Hair Mart Unisex Salon)
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', borderTop: '1px dashed #000', paddingTop: '10px', marginTop: '10px', fontSize: '10px' }}>
+              <div>Thank You for Visiting Hair Mart!</div>
+              <div>Look Stylish. Feel Confident. ✨</div>
+              <div>Follow us on Instagram: @hairmart</div>
+            </div>
+
+            {/* Print & Close Actions */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleReprintInvoice(previewBill);
+                  setPreviewBill(null);
+                }}
+                style={{
+                  flex: 1,
+                  background: '#000',
+                  color: '#FFF',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '6px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                🖨️ Print Now (58mm)
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewBill(null)}
+                style={{
+                  background: '#E2E8F0',
+                  color: '#000',
+                  border: 'none',
+                  padding: '10px 14px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════
+          END OF DAY (EOD) OWNER WHATSAPP REPORT MODAL (9035959286)
+         ═══════════════════════════════════════════════════════════════ */}
+      {showEodModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowEodModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: '#121723',
+              border: '1px solid rgba(212, 175, 55, 0.35)',
+              borderRadius: '14px',
+              maxWidth: '680px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(18, 23, 35, 0.95))',
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: '17px',
+                    fontWeight: 800,
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span>📲</span>
+                  <span>End of Day Bills Report</span>
+                  <span
+                    style={{
+                      background: 'rgba(34, 197, 94, 0.2)',
+                      color: '#4ADE80',
+                      border: '1px solid rgba(34, 197, 94, 0.4)',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Owner: 9035959286
+                  </span>
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Audit summary of all today&apos;s bills, cash/UPI/card split, and staff attendance.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEodModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  fontSize: '22px',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              {eodCopyNotice && (
+                <div
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.15)',
+                    border: '1px solid #22C55E',
+                    color: '#4ADE80',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {eodCopyNotice}
+                </div>
+              )}
+
+              {eodLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
+                  <div>Compiling today&apos;s bills register and collections...</div>
+                </div>
+              ) : eodData ? (
+                <>
+                  {/* KPI Grid */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                      gap: '12px',
+                      marginBottom: '18px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'rgba(212, 175, 55, 0.08)',
+                        border: '1px solid rgba(212, 175, 55, 0.25)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: 'var(--gold-400)', fontWeight: 600 }}>Total Revenue</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', marginTop: '2px' }}>
+                        ₹{Number(eodData.totalRevenue || 0).toLocaleString('en-IN')}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{eodData.totalBills} bills</div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: 'rgba(34, 197, 94, 0.08)',
+                        border: '1px solid rgba(34, 197, 94, 0.25)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: '#4ADE80', fontWeight: 600 }}>💵 Cash</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', marginTop: '2px' }}>
+                        ₹{Number(eodData.cashTotal || 0).toLocaleString('en-IN')}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{eodData.cashCount} bills</div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.08)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: '#60A5FA', fontWeight: 600 }}>📱 UPI / QR</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', marginTop: '2px' }}>
+                        ₹{Number(eodData.upiTotal || 0).toLocaleString('en-IN')}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{eodData.upiCount} bills</div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: 'rgba(168, 85, 247, 0.08)',
+                        border: '1px solid rgba(168, 85, 247, 0.25)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                      }}
+                    >
+                      <div style={{ fontSize: '11px', color: '#C084FC', fontWeight: 600 }}>💳 Card</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: '#FFF', marginTop: '2px' }}>
+                        ₹{Number(eodData.cardTotal || 0).toLocaleString('en-IN')}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{eodData.cardCount} bills</div>
+                    </div>
+                  </div>
+
+                  {/* Sections Split */}
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      padding: '10px 14px',
+                      marginBottom: '16px',
+                      display: 'flex',
+                      justifyContent: 'space-around',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Men&apos;s Section: </span>
+                      <b style={{ color: '#FFF' }}>₹{Number(eodData.menTotal || 0).toLocaleString('en-IN')}</b>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}> ({eodData.menCount} bills)</span>
+                    </div>
+                    <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '14px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Women&apos;s Section: </span>
+                      <b style={{ color: '#FFF' }}>₹{Number(eodData.womenTotal || 0).toLocaleString('en-IN')}</b>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}> ({eodData.womenCount} bills)</span>
+                    </div>
+                  </div>
+
+                  {/* Itemized Bills Accordion / Preview */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: 'var(--gold-400)',
+                        marginBottom: '8px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span>📋 Bills Register ({eodData.billsList?.length || 0})</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sorted by bill time</span>
+                    </div>
+                    <div
+                      style={{
+                        maxHeight: '160px',
+                        overflowY: 'auto',
+                        background: '#0B0F18',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '8px',
+                        padding: '8px',
+                      }}
+                    >
+                      {eodData.billsList && eodData.billsList.length > 0 ? (
+                        eodData.billsList.map((b: any, idx: number) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '6px 8px',
+                              borderBottom: idx < eodData.billsList.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                              fontSize: '11px',
+                            }}
+                          >
+                            <div>
+                              <b style={{ color: '#FFF' }}>#{b.billNo}</b>
+                              <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>({b.time})</span>
+                              <span style={{ color: '#CBD5E1', marginLeft: '6px' }}>{b.customerName}</span>
+                              <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{b.services}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <b style={{ color: 'var(--gold-400)' }}>₹{b.amount}</b>
+                              <div style={{ color: '#94A3B8', fontSize: '10px', textTransform: 'uppercase' }}>
+                                {b.paymentMethod}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>
+                          No bills generated yet today.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Closing remarks input */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#CBD5E1', marginBottom: '6px' }}>
+                      Optional Closing Notes / Safe Handover:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Safe cash handed over ₹8,000 to manager, all workstations cleaned."
+                      value={eodClosingNotes}
+                      onChange={(e) => setEodClosingNotes(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: '#0B0F18',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#FFF',
+                        borderRadius: '6px',
+                        padding: '9px 12px',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </div>
+                </>
+              ) : null}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div
+              style={{
+                padding: '14px 24px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                background: '#0E131E',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleCopyEodReport}
+                disabled={!eodData}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#CBD5E1',
+                  padding: '9px 16px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>📋</span>
+                <span>Copy Report</span>
+              </button>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEodModal(false)}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#94A3B8',
+                    padding: '9px 16px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendEodToOwner}
+                  disabled={!eodData}
+                  style={{
+                    background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+                    border: 'none',
+                    color: '#FFF',
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(34, 197, 94, 0.35)',
+                  }}
+                >
+                  <span>📲</span>
+                  <span>Send to WhatsApp (9035959286)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getStartOfTodayUTC, getSalonDateString } from '@/lib/attendanceSessions';
 
 function parseTimeToMinutes(timeStr: string): number | null {
   const match = timeStr.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?$/);
@@ -45,14 +46,12 @@ export async function GET(request: Request) {
     }
 
     if (todayParam === 'true' || todayParam === '1') {
-      const now = new Date();
-      const startOfDay = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
-      const endOfDay = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999));
+      const startOfDay = getStartOfTodayUTC();
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
       where.date = { gte: startOfDay, lte: endOfDay };
     } else if (dateParam) {
-      const targetDate = new Date(dateParam);
-      const startOfDay = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0, 0));
-      const endOfDay = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999));
+      const startOfDay = getStartOfTodayUTC(dateParam);
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
       where.date = { gte: startOfDay, lte: endOfDay };
     } else if (monthParam) {
       const [year, month] = monthParam.split('-').map(Number);
@@ -141,13 +140,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Staff ID is required' }, { status: 400 });
     }
 
-    const attendanceDate = date ? new Date(date) : new Date();
-    const normalizedDate = new Date(Date.UTC(
-      attendanceDate.getFullYear(),
-      attendanceDate.getMonth(),
-      attendanceDate.getDate(),
-      0, 0, 0, 0
-    ));
+    const normalizedDate = getStartOfTodayUTC(date || undefined);
 
     const finalStatus = status || 'Present';
     let duration: string | null = null;

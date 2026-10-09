@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { printBillToEzoPrinter } from '@/lib/thermalPrinter';
 
 interface ChairRevenueItem {
   id: string;
@@ -119,6 +120,50 @@ export default function AdminBusinessReportsPage() {
     window.print();
   };
 
+  const handleReprintBill = async (b: any) => {
+    try {
+      const items = b.services
+        ? b.services.split(',').map((s: string) => ({
+            name: s.trim(),
+            quantity: 1,
+            price: b.amount,
+          }))
+        : [{ name: 'Salon Service', quantity: 1, price: b.amount }];
+
+      await printBillToEzoPrinter({
+        billNo: b.billNo,
+        date: new Date(b.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        time: b.time,
+        customerName: b.customerName,
+        customerPhone: b.phone === 'Not Provided' ? undefined : b.phone,
+        items,
+        subtotal: b.amount,
+        discount: 0,
+        total: b.amount,
+        paymentMethod: (b.paymentMethod || 'cash').toUpperCase(),
+      });
+      alert(`Bill #${b.billNo} sent to 58mm printer!`);
+    } catch (e: any) {
+      alert('Reprint failed: ' + e.message);
+    }
+  };
+
+  const handleSendEodToOwner = async () => {
+    try {
+      const res = await fetch('/api/reports/end-of-day');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.whatsappUrl) {
+          window.open(json.whatsappUrl, '_blank');
+          return;
+        }
+      }
+      alert('Could not compile End of Day report.');
+    } catch (e: any) {
+      alert('Failed to send EOD report: ' + e.message);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '60px' }}>
       {/* Top Header & Export Actions */}
@@ -141,7 +186,25 @@ export default function AdminBusinessReportsPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={handleSendEodToOwner}
+            style={{
+              background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.08))',
+              border: '1px solid rgba(34, 197, 94, 0.5)',
+              color: '#4ADE80',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 700,
+            }}
+            title="Dispatch today's complete bills register & audit report to owner's WhatsApp (9035959286)"
+          >
+            <span>📲</span>
+            <span>Send EOD to Owner (9035959286)</span>
+          </button>
           <button
             type="button"
             className="btn btn-outline btn-sm"
@@ -546,12 +609,13 @@ export default function AdminBusinessReportsPage() {
                     <th>Amount</th>
                     <th>Payment</th>
                     <th>Status</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.recentBills.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      <td colSpan={10} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
                         No transactions found for this date range.
                       </td>
                     </tr>
@@ -600,6 +664,26 @@ export default function AdminBusinessReportsPage() {
                           <span style={{ fontSize: '11px', color: '#4ADE80', background: 'rgba(34,197,94,0.15)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
                             {b.status}
                           </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleReprintBill(b)}
+                            style={{
+                              background: 'rgba(212, 175, 55, 0.15)',
+                              border: '1px solid rgba(212, 175, 55, 0.4)',
+                              color: 'var(--gold-400)',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title="Reprint 58mm thermal receipt"
+                          >
+                            🖨️ Reprint
+                          </button>
                         </td>
                       </tr>
                     ))

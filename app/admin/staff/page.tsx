@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { getSalonDateString, formatCurrentTime, parseSessionsFromRecord } from '@/lib/attendanceSessions';
 
 interface ChairItem {
   id: string;
@@ -119,7 +120,7 @@ export default function AdminStaffManagementPage() {
 
   // ── Tab 2: Attendance States ──
   const [attendanceDate, setAttendanceDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
+    return getSalonDateString();
   });
   const [attendanceStaffFilter, setAttendanceStaffFilter] = useState('all');
   const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
@@ -149,8 +150,8 @@ export default function AdminStaffManagementPage() {
   const [showAddLeaveModal, setShowAddLeaveModal] = useState(false);
   const [leaveForm, setLeaveForm] = useState({
     staffId: '',
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: getSalonDateString(),
+    endDate: getSalonDateString(),
     leaveType: 'Casual',
     reason: '',
     status: 'approved',
@@ -431,8 +432,8 @@ export default function AdminStaffManagementPage() {
         setShowAddLeaveModal(false);
         setLeaveForm({
           staffId: '',
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date().toISOString().split('T')[0],
+          startDate: getSalonDateString(),
+          endDate: getSalonDateString(),
           leaveType: 'Casual',
           reason: '',
           status: 'approved',
@@ -891,7 +892,7 @@ export default function AdminStaffManagementPage() {
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
-                onClick={() => setAttendanceDate(new Date().toISOString().split('T')[0])}
+                onClick={() => setAttendanceDate(getSalonDateString())}
                 style={{ fontSize: '12px' }}
               >
                 Today
@@ -991,6 +992,19 @@ export default function AdminStaffManagementPage() {
                     .map((s) => {
                       const rec = attendances.find((a) => a.staffId === s.id);
                       const currentStatus = rec?.status || 'Not Walked In';
+                      const sessions = parseSessionsFromRecord(rec?.notes, rec?.checkIn, rec?.checkOut);
+                      const isCurrentlyWorking = Boolean(rec?.checkIn && !rec?.checkOut);
+                      const latestSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+
+                      // Clean duration calculation without duplicate "(+ In Progress)"
+                      let displayDuration = '—';
+                      if (rec?.checkIn) {
+                        if (rec.duration && rec.duration !== 'In Progress' && rec.duration !== '—') {
+                          displayDuration = isCurrentlyWorking ? `${rec.duration} (+ In Progress)` : rec.duration;
+                        } else {
+                          displayDuration = isCurrentlyWorking ? 'In Progress' : (rec.duration || '—');
+                        }
+                      }
 
                       return (
                         <tr key={s.id}>
@@ -1005,15 +1019,44 @@ export default function AdminStaffManagementPage() {
                             )}
                           </td>
                           <td style={{ color: rec?.checkIn ? '#4ADE80' : 'var(--text-muted)', fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                            {rec?.checkIn || '—'}
+                            {rec?.checkIn ? (
+                              <div>
+                                <div>{rec.checkIn}</div>
+                                {sessions.length > 1 && latestSession && (
+                                  <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
+                                    Latest: {latestSession.in} (S{sessions.length})
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              '—'
+                            )}
                           </td>
-                          <td style={{ color: rec?.checkOut ? '#60A5FA' : 'var(--text-muted)', fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                            {rec?.checkOut || '—'}
+                          <td style={{ fontSize: '13px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                            {rec?.checkOut ? (
+                              <div>
+                                <span style={{ color: '#60A5FA' }}>{rec.checkOut}</span>
+                                {sessions.length > 1 && (
+                                  <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
+                                    {sessions.length} sessions completed
+                                  </div>
+                                )}
+                              </div>
+                            ) : isCurrentlyWorking ? (
+                              <div>
+                                <span style={{ color: '#4ADE80', fontSize: '12px' }}>● On Duty</span>
+                                {sessions.length > 1 && sessions[0].out && (
+                                  <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 500 }}>
+                                    Break was: {sessions[0].out}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            )}
                           </td>
                           <td style={{ color: 'var(--gold-400)', fontWeight: 700, fontSize: '13px' }}>
-                            {rec?.duration
-                              ? `${rec.duration}${!rec.checkOut ? ' (+ In Progress)' : ''}`
-                              : (rec?.checkIn && !rec?.checkOut ? 'In Progress' : '—')}
+                            {displayDuration}
                           </td>
                           <td>
                             <span
@@ -1054,8 +1097,29 @@ export default function AdminStaffManagementPage() {
                               {currentStatus}
                             </span>
                           </td>
-                          <td style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '160px' }}>
-                            {rec?.notes || '—'}
+                          <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {sessions.length > 1 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                {sessions.map((sess) => (
+                                  <span
+                                    key={sess.sessionNum}
+                                    style={{
+                                      fontSize: '11px',
+                                      background: 'rgba(255,255,255,0.06)',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      border: '1px solid rgba(255,255,255,0.08)',
+                                      color: sess.out ? '#CBD5E1' : '#4ADE80',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    <strong>S{sess.sessionNum}:</strong> {sess.in} → {sess.out || 'Active'}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              rec?.notes || '—'
+                            )}
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             {rec ? (
@@ -1072,6 +1136,7 @@ export default function AdminStaffManagementPage() {
                                 type="button"
                                 className="btn btn-outline btn-sm"
                                 onClick={async () => {
+                                  const defaultIn = attendanceDate === getSalonDateString() ? formatCurrentTime() : '09:00 AM';
                                   await fetch('/api/staff/attendance', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -1079,7 +1144,8 @@ export default function AdminStaffManagementPage() {
                                       staffId: s.id,
                                       date: attendanceDate,
                                       status: 'Present',
-                                      checkIn: '09:00 AM',
+                                      checkIn: defaultIn,
+                                      notes: `Session 1: ${defaultIn} - In Progress`,
                                     }),
                                   });
                                   loadAttendance();

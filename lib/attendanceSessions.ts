@@ -9,18 +9,37 @@ export interface AttendanceSession {
   durationMinutes: number; // calculated working minutes
 }
 
-export function formatCurrentTime(): string {
-  const now = new Date();
-  return now.toLocaleTimeString('en-US', {
+export const SALON_TIMEZONE = 'Asia/Kolkata';
+
+export function formatCurrentTime(date = new Date()): string {
+  return date.toLocaleTimeString('en-US', {
+    timeZone: SALON_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
   });
 }
 
-export function getStartOfTodayUTC(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
+export function getSalonDateString(date = new Date()): string {
+  // Returns "YYYY-MM-DD" in salon timezone (Asia/Kolkata)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: SALON_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+export function getStartOfTodayUTC(dateInput?: Date | string): Date {
+  let dateStr: string;
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.trim())) {
+    dateStr = dateInput.trim();
+  } else {
+    const d = dateInput instanceof Date ? dateInput : new Date();
+    dateStr = getSalonDateString(d);
+  }
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
 }
 
 export function parseTimeToMinutes(timeStr: string): number | null {

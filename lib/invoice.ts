@@ -1,4 +1,6 @@
 // Invoice generation utility
+import { generateQrSvg } from './qrCode';
+import { generateHairMartUpiUrl, HAIR_MART_UPI_VPA } from './thermalPrinter';
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -141,6 +143,17 @@ export function generateInvoiceHTML(data: InvoiceData): string {
       ${data.tax > 0 ? `<div class="totals-row"><span>Tax</span><span>₹${data.tax.toFixed(2)}</span></div>` : ''}
       ${data.discount > 0 ? `<div class="totals-row"><span>Discount</span><span>-₹${data.discount.toFixed(2)}</span></div>` : ''}
       <div class="totals-row total"><span>Total</span><span>₹${data.total.toFixed(2)}</span></div>
+    </div>
+
+    <!-- Dynamic UPI Payment QR Code -->
+    <div style="margin: 28px auto 10px; text-align: center; padding: 16px; background: #141414; border: 1px dashed #333; border-radius: 10px; max-width: 260px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #C9A96E; font-weight: 700; margin-bottom: 8px;">Scan &amp; Pay via UPI</div>
+      <div style="display: flex; justify-content: center; margin: 4px 0;">
+        ${generateQrSvg(generateHairMartUpiUrl(data.total, data.invoiceNumber), 140)}
+      </div>
+      <div style="font-weight: 700; color: #FFF; font-size: 13px; margin-top: 6px;">Scan To Pay ₹${data.total.toFixed(2)}</div>
+      <div style="font-size: 10px; color: #888; margin-top: 2px;">UPI: ${HAIR_MART_UPI_VPA}</div>
+      <div style="font-size: 9px; color: #666; margin-top: 2px;">GPay • PhonePe • Paytm • BHIM</div>
     </div>
 
     <div class="footer">

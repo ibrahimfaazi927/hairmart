@@ -45,7 +45,6 @@ const navSections: NavSection[] = [
     title: 'CONFIGURATION',
     items: [
       { href: '/admin/reviews', label: 'Reviews & Feedback', icon: '⭐' },
-      { href: '/admin/gallery', label: 'Studio Gallery', icon: '🖼️' },
       { href: '/admin/settings', label: 'Salon Settings', icon: '⚙️' },
     ],
   },

@@ -67,7 +67,22 @@ export async function GET(request: Request) {
       return NextResponse.json(invoice);
     }
 
+    const search = searchParams.get('search')?.trim();
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10), 1), 200);
+
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { invoiceNumber: { contains: search, mode: 'insensitive' } },
+        { customer: { name: { contains: search, mode: 'insensitive' } } },
+        { customer: { phone: { contains: search, mode: 'insensitive' } } },
+        { appointment: { customerName: { contains: search, mode: 'insensitive' } } },
+        { appointment: { customerPhone: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
     const invoices = await prisma.invoice.findMany({
+      where,
       include: {
         customer: true,
         appointment: {
@@ -80,6 +95,7 @@ export async function GET(request: Request) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     });
 
     return NextResponse.json(invoices);
