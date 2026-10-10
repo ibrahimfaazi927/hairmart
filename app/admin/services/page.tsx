@@ -24,6 +24,7 @@ export default function AdminServicesPage() {
   const [editService, setEditService] = useState<ServiceData | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [modalSection, setModalSection] = useState<'all' | 'women' | 'men' | 'unisex'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
@@ -137,15 +138,24 @@ export default function AdminServicesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to remove this service from catalogue?')) return;
     try {
-      await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/services/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.error || 'Failed to remove service from catalogue');
+        return;
+      }
       loadData();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert(e.message || 'Error deleting service');
     }
   };
 
   const openEdit = (s: ServiceData) => {
     setEditService(s);
+    const cat = categories.find((c) => c.id === s.categoryId);
+    const sec = cat?.gender || 'all';
+    setModalSection(sec as any);
     setForm({
       name: s.name,
       description: s.description || '',
@@ -160,13 +170,23 @@ export default function AdminServicesPage() {
 
   const openAdd = () => {
     setEditService(null);
+    let initialSec: 'all' | 'women' | 'men' | 'unisex' = 'all';
+    let initialCatId = categories[0]?.id || '';
+    if (selectedCat !== 'all') {
+      const activeCat = categories.find((c) => c.id === selectedCat);
+      if (activeCat) {
+        initialSec = (activeCat.gender as any) || 'all';
+        initialCatId = activeCat.id;
+      }
+    }
+    setModalSection(initialSec);
     setForm({
       name: '',
       description: '',
       duration: '30',
       price: '200',
       image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
-      categoryId: categories[0]?.id || '',
+      categoryId: initialCatId,
       active: true,
     });
     setShowModal(true);
@@ -412,20 +432,91 @@ export default function AdminServicesPage() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '12px' }}>
+              {/* Select Section (Women / Men / Unisex) */}
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Select Section *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalSection('women');
+                      const womenCat = categories.find((c) => c.gender === 'women');
+                      if (womenCat) setForm((prev) => ({ ...prev, categoryId: womenCat.id }));
+                    }}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: modalSection === 'women' ? '2px solid #EC4899' : '1px solid rgba(255,255,255,0.1)',
+                      background: modalSection === 'women' ? 'rgba(236,72,153,0.18)' : '#121723',
+                      color: modalSection === 'women' ? '#F472B6' : '#9CA3AF',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    👩 Women
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalSection('men');
+                      const menCat = categories.find((c) => c.gender === 'men');
+                      if (menCat) setForm((prev) => ({ ...prev, categoryId: menCat.id }));
+                    }}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: modalSection === 'men' ? '2px solid #3B82F6' : '1px solid rgba(255,255,255,0.1)',
+                      background: modalSection === 'men' ? 'rgba(59,130,246,0.18)' : '#121723',
+                      color: modalSection === 'men' ? '#60A5FA' : '#9CA3AF',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🧔 Men
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModalSection('all')}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '6px',
+                      border: modalSection === 'all' || modalSection === 'unisex' ? '2px solid var(--gold-400)' : '1px solid rgba(255,255,255,0.1)',
+                      background: modalSection === 'all' || modalSection === 'unisex' ? 'rgba(212,175,55,0.18)' : '#121723',
+                      color: modalSection === 'all' || modalSection === 'unisex' ? 'var(--gold-400)' : '#9CA3AF',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔄 Unisex / All
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Category
+                  Category *
                 </label>
                 <select
                   value={form.categoryId}
                   onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                   style={{ width: '100%', background: '#121723', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#FFF', padding: '10px 12px', fontSize: '13px' }}
                 >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
+                  {categories
+                    .filter((c) => {
+                      if (modalSection === 'all') return true;
+                      return c.gender === modalSection || c.gender === 'unisex';
+                    })
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.gender === 'men' ? '🧔 ' : c.gender === 'women' ? '👩 ' : '🔄 '}
+                        {c.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 

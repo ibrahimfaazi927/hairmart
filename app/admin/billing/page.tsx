@@ -135,6 +135,78 @@ const DISTINCT_SERVICE_IMAGES: Record<string, string> = {
   'hair straightening': 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=500&auto=format&fit=crop&q=80',
   'hair smoothing': 'https://images.unsplash.com/photo-1605497788044-5a32c7078486?w=500&auto=format&fit=crop&q=80',
   'd-tan': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+
+  // ─── THREADING ───
+  'threading - eyebrows': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&auto=format&fit=crop&q=80',
+  'eyebrows': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&auto=format&fit=crop&q=80',
+  'threading - upper lip': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'threading - chin & neck': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'threading - forehead': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'threading - sides': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'threading - full face': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'full face threading': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+
+  // ─── CLEAN UP & FACIAL ───
+  'fruit clean up': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'lotus clean up': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'mango clean up': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'gold clean up': 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=500&auto=format&fit=crop&q=80',
+  'diamond clean up': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'wine clean up': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'raaga clean up': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+  'fruit facial': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'lotus facial': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'mango facial': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'gold facial': 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=500&auto=format&fit=crop&q=80',
+  'diamond facial': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'wine facial': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'raaga facial': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+
+  // ─── D-TAN ───
+  'd - tan - ozone': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'oxy glow - d - tan': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'raaga - d - tan': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'o3 plus - d - tan': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'natures - d - tan': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+
+  // ─── PACKAGES ───
+  'luxury package (first sitting)': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+  'luxury package': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+
+  // ─── CLASSIC WAXING ───
+  'classic wax - full hand': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'classic wax - half hand': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'classic wax - full legs': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&auto=format&fit=crop&q=80',
+  'classic wax - half legs': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&auto=format&fit=crop&q=80',
+  'classic wax - under arms': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'classic wax - full waxing combo (fa+fl+ua)': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'classic wax - full front': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'classic wax - midriff': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'classic wax - bikini line': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'classic wax - full bikini': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'classic wax - full body': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+  'classic wax - chin wax': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'classic wax - upper lip': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'classic wax - face': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&auto=format&fit=crop&q=80',
+
+  // ─── RICA WAXING ───
+  'rica wax - full hand': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'rica wax - half hand': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'rica wax - full legs': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&auto=format&fit=crop&q=80',
+  'rica wax - half legs': 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&auto=format&fit=crop&q=80',
+  'rica wax - under arms': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
+  'rica wax - full waxing combo (fa+fl+ua)': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=80',
+  'rica wax - full front wax': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'rica wax - midriff': 'https://images.unsplash.com/photo-1596755389378-c31d21fd1273?w=500&auto=format&fit=crop&q=80',
+  'rica wax - bikini line': 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&auto=format&fit=crop&q=80',
+  'rica wax - full bikini': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=500&auto=format&fit=crop&q=80',
+  'rica wax - full body (other than face & bikini)': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=500&auto=format&fit=crop&q=80',
+
+  // ─── BRAZILIAN WAX ───
+  'brazilian wax - full face': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&auto=format&fit=crop&q=80',
+  'brazilian wax - upper lip': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&auto=format&fit=crop&q=80',
+  'brazilian wax - chin': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=80',
+  'brazilian wax - under arms': 'https://images.unsplash.com/photo-1512290903672-613d969176bf?w=500&auto=format&fit=crop&q=80',
 };
 
 const DISTINCT_IMAGE_POOL = [
@@ -158,39 +230,65 @@ const DISTINCT_IMAGE_POOL = [
   'https://images.unsplash.com/photo-1526045478516-99145907023c?w=500&auto=format&fit=crop&q=80',
 ];
 
+export function optimizeImageUrl(url?: string | null): string {
+  if (!url) return '';
+  if (url.includes('images.unsplash.com')) {
+    // Compress and downscale for high-density tablet/mobile POS performance
+    return url.replace(/w=\d+/, 'w=140').replace(/q=\d+/, 'q=50');
+  }
+  return url;
+}
+
 function getServiceImage(name: string, index: number = 0): string {
   const key = name.toLowerCase().trim();
+  let img = '';
   if (DISTINCT_SERVICE_IMAGES[key]) {
-    return DISTINCT_SERVICE_IMAGES[key];
+    img = DISTINCT_SERVICE_IMAGES[key];
+  } else {
+    // Try partial match
+    for (const [k, url] of Object.entries(DISTINCT_SERVICE_IMAGES)) {
+      if (key.includes(k) || k.includes(key)) {
+        img = url;
+        break;
+      }
+    }
   }
-  // Try partial match
-  for (const [k, url] of Object.entries(DISTINCT_SERVICE_IMAGES)) {
-    if (key.includes(k) || k.includes(key)) return url;
+  if (!img) {
+    // Fallback to deterministic item in image pool
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    const idx = Math.abs(hash + index) % DISTINCT_IMAGE_POOL.length;
+    img = DISTINCT_IMAGE_POOL[idx];
   }
-  // Fallback to deterministic item in image pool
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const idx = Math.abs(hash + index) % DISTINCT_IMAGE_POOL.length;
-  return DISTINCT_IMAGE_POOL[idx];
+  return optimizeImageUrl(img);
 }
 
 const MEN_CATEGORIES = [
   'All',
   'Hair Cut & Shave',
   'Beard Grooming',
-  'Facial & D-Tan',
+  'Hair Colouring',
   'Hair Spa & Massage',
-  'Hair Color',
+  'Hair Forms',
+  'Packages & Combos',
 ];
 
 const WOMEN_CATEGORIES = [
   'All',
-  'Hair Cut & Styling',
-  'Facial & Clean Up',
-  'Threading & Waxing',
-  'Hair Spa & Treatment',
-  'Bridal & Makeup',
-  'Nails & Pedicure',
+  'Hair Cut',
+  'Threading',
+  'Waxing',
+  'Clean Up',
+  'Facial',
+  'Dee Tan',
+  'Bleach',
+  'Hair Spa',
+  'Hair Forms',
+  'Pedicure & Manicure',
+  'Highlights & Colour',
+  'Wash & Styling',
+  'Hair Masque',
+  'Packages',
 ];
 
 export default function AdminBillingPOSPage() {
@@ -202,10 +300,15 @@ export default function AdminBillingPOSPage() {
   const [serviceCategories, setServiceCategories] = useState<Array<{id: string; name: string; gender?: string}>>([]);
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
   const [serviceFormMode, setServiceFormMode] = useState<'list' | 'add' | 'edit'>('list');
-  const [serviceForm, setServiceForm] = useState({ name: '', price: '', duration: '', categoryId: '', description: '' });
+  const [serviceFormSection, setServiceFormSection] = useState<'women' | 'men' | 'unisex'>('women');
+  const [serviceForm, setServiceForm] = useState({ name: '', price: '', duration: '', categoryId: '', description: '', image: '' });
+  const [uploadingServiceImage, setUploadingServiceImage] = useState(false);
+  const serviceFileInputRef = useRef<HTMLInputElement>(null);
   const [savingService, setSavingService] = useState(false);
   const [serviceManagerFilter, setServiceManagerFilter] = useState<'all' | 'men' | 'women'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [showAllServices, setShowAllServices] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchCustomer, setSearchCustomer] = useState('');
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
@@ -275,6 +378,14 @@ export default function AdminBillingPOSPage() {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Instant zero-millisecond render from cache on reload
+    try {
+      const cachedSrv = localStorage.getItem('pos_cached_services');
+      const cachedCat = localStorage.getItem('pos_cached_categories');
+      if (cachedSrv) setServices(JSON.parse(cachedSrv));
+      if (cachedCat) setServiceCategories(JSON.parse(cachedCat));
+    } catch {}
+
     loadInitialData();
     const now = new Date();
     setGeneratedDate(now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }));
@@ -285,7 +396,7 @@ export default function AdminBillingPOSPage() {
     try {
       const [srvRes, custRes, chairRes] = await Promise.all([
         fetch('/api/services'),
-        fetch('/api/customers'),
+        fetch('/api/customers?minimal=true'),
         fetch('/api/chairs'),
       ]);
 
@@ -294,14 +405,15 @@ export default function AdminBillingPOSPage() {
         const loadedServices: ServiceItem[] = srvData.services || [];
         setServices(loadedServices);
         if (srvData.categories) setServiceCategories(srvData.categories);
+        try {
+          localStorage.setItem('pos_cached_services', JSON.stringify(loadedServices));
+          if (srvData.categories) localStorage.setItem('pos_cached_categories', JSON.stringify(srvData.categories));
+        } catch {}
       }
 
       if (custRes.ok) {
         const custData = await custRes.json();
         setCustomers(custData || []);
-        if (custData && custData.length > 0) {
-          setSelectedCustomer(custData[0]);
-        }
       }
 
       if (chairRes.ok) {
@@ -328,24 +440,69 @@ export default function AdminBillingPOSPage() {
   const handleOpenServiceManager = () => {
     setServiceFormMode('list');
     setEditingService(null);
-    setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '' });
+    setServiceFormSection(posSection);
+    setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '', image: '' });
     setShowServiceManager(true);
+  };
+
+  const handleServiceImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingServiceImage(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      data.append('folder', 'services');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: data,
+      });
+
+      const json = await res.json();
+      if (res.ok && json.url) {
+        setServiceForm((prev) => ({ ...prev, image: json.url }));
+      } else {
+        alert(json.error || 'Failed to upload image. Please try again.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || 'Image upload failed');
+    } finally {
+      setUploadingServiceImage(false);
+      if (e.target) e.target.value = '';
+    }
   };
 
   const handleStartAddService = () => {
     setEditingService(null);
-    setServiceForm({ name: '', price: '', duration: '', categoryId: serviceCategories[0]?.id || '', description: '' });
+    const targetSection = posSection;
+    setServiceFormSection(targetSection);
+    const matched = serviceCategories.find((c) => c.gender === targetSection || c.gender === 'unisex');
+    setServiceForm({
+      name: '',
+      price: '',
+      duration: '30',
+      categoryId: matched?.id || serviceCategories[0]?.id || '',
+      description: '',
+      image: '',
+    });
     setServiceFormMode('add');
   };
 
   const handleStartEditService = (s: ServiceItem) => {
     setEditingService(s);
+    const cat = serviceCategories.find((c) => c.id === (s.category?.id || (s as any).categoryId));
+    const sec = (cat?.gender as 'women' | 'men' | 'unisex') || (isMenService(s) ? 'men' : 'women');
+    setServiceFormSection(sec);
     setServiceForm({
       name: s.name,
       price: String(s.price || 0),
       duration: String(s.duration || ''),
-      categoryId: s.category?.id || (s as any).categoryId || '',
+      categoryId: cat?.id || s.category?.id || (s as any).categoryId || '',
       description: (s as any).description || '',
+      image: s.image || '',
     });
     setServiceFormMode('edit');
   };
@@ -363,6 +520,7 @@ export default function AdminBillingPOSPage() {
         duration: serviceForm.duration || null,
         categoryId: serviceForm.categoryId,
         description: serviceForm.description || null,
+        image: serviceForm.image || null,
       };
 
       if (serviceFormMode === 'edit' && editingService) {
@@ -388,7 +546,7 @@ export default function AdminBillingPOSPage() {
       }
       setServiceFormMode('list');
       setEditingService(null);
-      setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '' });
+      setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '', image: '' });
     } catch (err) {
       console.error(err);
       alert('Failed to save service.');
@@ -400,15 +558,21 @@ export default function AdminBillingPOSPage() {
   const handleDeleteService = async (serviceId: string) => {
     if (!confirm('Are you sure you want to delete this service? This cannot be undone.')) return;
     try {
-      await fetch(`/api/services/${serviceId}`, { method: 'DELETE' });
+      const delRes = await fetch(`/api/services/${serviceId}`, { method: 'DELETE' });
+      if (!delRes.ok) {
+        const d = await delRes.json().catch(() => ({}));
+        alert(d.error || 'Failed to delete service.');
+        return;
+      }
       const res = await fetch('/api/services');
       if (res.ok) {
         const data = await res.json();
         setServices(data.services || []);
       }
-    } catch (err) {
+      alert('Service deleted successfully.');
+    } catch (err: any) {
       console.error(err);
-      alert('Failed to delete service.');
+      alert(err.message || 'Failed to delete service.');
     }
   };
 
@@ -525,37 +689,85 @@ export default function AdminBillingPOSPage() {
 
   // Filtered services
   const filteredServices = activeSectionServices.filter((s) => {
+    if (serviceSearch.trim()) {
+      const q = serviceSearch.toLowerCase().trim();
+      const name = s.name.toLowerCase();
+      const cat = (s.category?.name || s.categoryName || '').toLowerCase();
+      const price = s.price.toString();
+      return name.includes(q) || cat.includes(q) || price.includes(q);
+    }
+
     if (selectedCategory === 'All') return true;
     const name = s.name.toLowerCase();
     const cat = (s.category?.name || s.categoryName || '').toLowerCase();
 
     if (posSection === 'men') {
+      if (cat.toLowerCase() === selectedCategory.toLowerCase()) return true;
       if (selectedCategory === 'Hair Cut & Shave')
-        return name.includes('cut') || name.includes('shav') || name.includes('hair') || cat.includes('cut');
+        return name.includes('cut') || name.includes('shav') || name.includes('hair') || cat.includes('cut') || cat.includes('shave');
       if (selectedCategory === 'Beard Grooming')
         return name.includes('beard') || name.includes('trim') || name.includes('shav');
-      if (selectedCategory === 'Facial & D-Tan')
-        return name.includes('facial') || name.includes('tan') || name.includes('skin') || name.includes('clean');
+      if (selectedCategory === 'Hair Colouring')
+        return name.includes('color') || name.includes('colour') || name.includes('streak') || name.includes('grey') || cat.includes('colour') || cat.includes('color');
       if (selectedCategory === 'Hair Spa & Massage')
-        return name.includes('spa') || name.includes('massag') || name.includes('dandruff') || name.includes('fall');
-      if (selectedCategory === 'Hair Color')
-        return name.includes('color') || name.includes('colour') || name.includes('streak') || name.includes('highlight');
+        return name.includes('spa') || name.includes('massag') || name.includes('dandruff') || name.includes('fall') || name.includes('clinix') || cat.includes('spa') || cat.includes('massage');
+      if (selectedCategory === 'Hair Forms')
+        return name.includes('smoothing') || name.includes('straightening') || name.includes('botox') || name.includes('biotin') || cat.includes('forms');
+      if (selectedCategory === 'Packages & Combos')
+        return name.includes('package') || name.includes('combo') || cat.includes('package') || cat.includes('combo');
+      return cat.includes(selectedCategory.toLowerCase()) || name.includes(selectedCategory.toLowerCase());
     } else if (posSection === 'women') {
-      if (selectedCategory === 'Hair Cut & Styling')
-        return name.includes('cut') || name.includes('style') || name.includes('wash') || name.includes('blow') || name.includes('hair');
-      if (selectedCategory === 'Facial & Clean Up')
-        return name.includes('facial') || name.includes('clean') || name.includes('skin') || name.includes('glow') || name.includes('bleach');
-      if (selectedCategory === 'Threading & Waxing')
-        return name.includes('thread') || name.includes('wax');
-      if (selectedCategory === 'Hair Spa & Treatment')
-        return name.includes('spa') || name.includes('keratin') || name.includes('botox') || name.includes('smoothing') || name.includes('treatment') || name.includes('fibre');
-      if (selectedCategory === 'Bridal & Makeup')
-        return name.includes('bridal') || name.includes('makeup') || name.includes('party');
-      if (selectedCategory === 'Nails & Pedicure')
-        return name.includes('pedicure') || name.includes('manicure') || name.includes('nail');
+      if (cat.toLowerCase() === selectedCategory.toLowerCase()) return true;
+      if (selectedCategory === 'Hair Cut') {
+        return cat.toLowerCase() === 'hair cut' || (name.includes('cut') && !cat.includes('forms') && !name.includes('smoothening'));
+      }
+      if (selectedCategory === 'Threading') {
+        return cat.toLowerCase() === 'threading' || name.includes('threading') || name.includes('eyebrow');
+      }
+      if (selectedCategory === 'Waxing') {
+        return cat.toLowerCase() === 'waxing' || name.includes('wax');
+      }
+      if (selectedCategory === 'Clean Up') {
+        return cat.toLowerCase() === 'clean up' || name.includes('clean up');
+      }
+      if (selectedCategory === 'Facial') {
+        return cat.toLowerCase() === 'facial' || (name.includes('facial') && !name.includes('clean up'));
+      }
+      if (selectedCategory === 'Dee Tan') {
+        return cat.toLowerCase() === 'dee tan' || cat.includes('tan') || name.includes('tan') || name.includes('de tan');
+      }
+      if (selectedCategory === 'Bleach') {
+        return cat.toLowerCase() === 'bleach' || name.includes('bleach');
+      }
+      if (selectedCategory === 'Hair Spa') {
+        return cat.toLowerCase() === 'hair spa' || name.includes('spa');
+      }
+      if (selectedCategory === 'Hair Forms') {
+        return cat.toLowerCase() === 'hair forms' || name.includes('smoothening') || name.includes('rebonding') || name.includes('keratine') || name.includes('botox') || name.includes('biotin');
+      }
+      if (selectedCategory === 'Pedicure & Manicure') {
+        return cat.toLowerCase().includes('pedicure') || cat.toLowerCase().includes('manicure') || name.includes('pedicure') || name.includes('manicure');
+      }
+      if (selectedCategory === 'Highlights & Colour' || selectedCategory === 'Crown Highlights & Colouring') {
+        return cat.toLowerCase().includes('colour') || cat.toLowerCase().includes('highlight') || name.includes('colour') || name.includes('highlight') || name.includes('touch up');
+      }
+      if (selectedCategory === 'Wash & Styling' || selectedCategory === 'Hair Wash & Styling') {
+        return cat.toLowerCase().includes('wash') || cat.toLowerCase().includes('blow') || name.includes('wash') || name.includes('blow') || name.includes('dry') || name.includes('iron');
+      }
+      if (selectedCategory === 'Hair Masque' || selectedCategory === 'Add On Masque') {
+        return cat.toLowerCase().includes('masque') || name.includes('masque');
+      }
+      if (selectedCategory === 'Packages') {
+        return cat.toLowerCase().includes('package') || name.includes('package') || name.includes('sitting') || name.includes('combo');
+      }
+      return cat.toLowerCase().includes(selectedCategory.toLowerCase()) || name.toLowerCase().includes(selectedCategory.toLowerCase());
     }
     return cat.includes(selectedCategory.toLowerCase()) || name.includes(selectedCategory.toLowerCase());
   });
+
+  const displayedServices = (posSection === 'women' && selectedCategory === 'All' && !serviceSearch.trim() && !showAllServices)
+    ? filteredServices.slice(0, 36)
+    : filteredServices;
 
   // Services filtered for service manager modal
   const managerFilteredServices = serviceManagerFilter === 'all'
@@ -1176,17 +1388,17 @@ export default function AdminBillingPOSPage() {
         style={{
           background: 'linear-gradient(135deg, rgba(20, 24, 33, 0.95), rgba(13, 17, 26, 0.95))',
           border: '1px solid rgba(212, 175, 55, 0.22)',
-          borderRadius: '12px',
-          padding: '12px 18px',
-          marginBottom: '16px',
+          borderRadius: '10px',
+          padding: '8px 14px',
+          marginBottom: '12px',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
+          gap: '10px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Send End of Day Bills to Owner WhatsApp Button */}
           <button
             type="button"
@@ -1195,14 +1407,14 @@ export default function AdminBillingPOSPage() {
               background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.08))',
               border: '1px solid rgba(34, 197, 94, 0.5)',
               color: '#4ADE80',
-              padding: '8px 16px',
+              padding: '6px 14px',
               borderRadius: '8px',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             }}
             title="Compile all today's bills, revenue, and staff attendance to send to owner WhatsApp (9035959286)"
@@ -1219,14 +1431,14 @@ export default function AdminBillingPOSPage() {
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.12)',
               color: '#CBD5E1',
-              padding: '8px 14px',
+              padding: '6px 12px',
               borderRadius: '8px',
               fontWeight: 500,
               fontSize: '12px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '5px',
             }}
           >
             <span>📋</span>
@@ -1238,11 +1450,11 @@ export default function AdminBillingPOSPage() {
       </div>
 
       {/* POS Layout: Services Grid (Left) + Current Bill with Customer Search (Right) */}
-      <div className="pos-layout-grid">
+      <div className="pos-layout-grid" style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
         {/* Left Column: Select Services */}
-        <div>
+        <div style={{ minWidth: 0, width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
           {/* Two-Section Switcher: Men & Women */}
-          <div className="pos-gender-switch-container" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+          <div className="pos-gender-switch-container">
             <button
               type="button"
               className={`pos-gender-switch-btn ${posSection === 'men' ? 'active' : ''}`}
@@ -1323,7 +1535,7 @@ export default function AdminBillingPOSPage() {
 
           {/* Service Image Cards Grid */}
           <div className="pos-services-grid">
-            {filteredServices.map((service, idx) => {
+            {displayedServices.map((service, idx) => {
               const serviceImg = service.image || getServiceImage(service.name, idx);
               return (
                 <div
@@ -1337,6 +1549,10 @@ export default function AdminBillingPOSPage() {
                       alt={service.name}
                       className="pos-service-img"
                       loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.opacity = '0';
+                      }}
                     />
                     <div className="pos-service-overlay"></div>
                   </div>
@@ -1363,10 +1579,31 @@ export default function AdminBillingPOSPage() {
               );
             })}
           </div>
+
+          {filteredServices.length > displayedServices.length && (
+            <div style={{ textAlign: 'center', margin: '12px 0' }}>
+              <button
+                type="button"
+                onClick={() => setShowAllServices(true)}
+                style={{
+                  background: 'rgba(212, 175, 55, 0.15)',
+                  border: '1px solid var(--gold-500)',
+                  color: 'var(--gold-400)',
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Show All {filteredServices.length} Services
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Current Bill with Customer Lookup at the TOP */}
-        <div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           {/* ── Chair Selection (Required) ── */}
           <div className="pos-chair-selection-card">
             <div className="pos-chair-header">
@@ -1378,46 +1615,94 @@ export default function AdminBillingPOSPage() {
               )}
             </div>
 
-            {menChairs.length > 0 && (
-              <div className="pos-chair-section">
-                <div className="pos-chair-section-label">Men's Section</div>
-                <div className="pos-chair-buttons">
-                  {menChairs.map((chair) => (
-                    <button
-                      key={chair.id}
-                      type="button"
-                      className={`pos-chair-btn ${selectedChairId === chair.id ? 'active' : ''}`}
-                      onClick={() => setSelectedChairId(chair.id)}
-                    >
-                      <span className="pos-chair-btn-name">{chair.name}</span>
-                      {chair.assignedStaff && (
-                        <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {posSection === 'women' ? (
+              <>
+                {womenChairs.length > 0 && (
+                  <div className="pos-chair-section">
+                    <div className="pos-chair-section-label">Women's Section</div>
+                    <div className="pos-chair-buttons">
+                      {womenChairs.map((chair) => (
+                        <button
+                          key={chair.id}
+                          type="button"
+                          className={`pos-chair-btn women ${selectedChairId === chair.id ? 'active' : ''}`}
+                          onClick={() => setSelectedChairId(chair.id)}
+                        >
+                          <span className="pos-chair-btn-name">{chair.name}</span>
+                          {chair.assignedStaff && (
+                            <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-            {womenChairs.length > 0 && (
-              <div className="pos-chair-section">
-                <div className="pos-chair-section-label">Women's Section</div>
-                <div className="pos-chair-buttons">
-                  {womenChairs.map((chair) => (
-                    <button
-                      key={chair.id}
-                      type="button"
-                      className={`pos-chair-btn women ${selectedChairId === chair.id ? 'active' : ''}`}
-                      onClick={() => setSelectedChairId(chair.id)}
-                    >
-                      <span className="pos-chair-btn-name">{chair.name}</span>
-                      {chair.assignedStaff && (
-                        <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                {menChairs.length > 0 && (
+                  <div className="pos-chair-section" style={{ marginTop: '6px' }}>
+                    <div className="pos-chair-section-label" style={{ opacity: 0.7 }}>Men's Section</div>
+                    <div className="pos-chair-buttons">
+                      {menChairs.map((chair) => (
+                        <button
+                          key={chair.id}
+                          type="button"
+                          className={`pos-chair-btn ${selectedChairId === chair.id ? 'active' : ''}`}
+                          onClick={() => setSelectedChairId(chair.id)}
+                        >
+                          <span className="pos-chair-btn-name">{chair.name}</span>
+                          {chair.assignedStaff && (
+                            <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {menChairs.length > 0 && (
+                  <div className="pos-chair-section">
+                    <div className="pos-chair-section-label">Men's Section</div>
+                    <div className="pos-chair-buttons">
+                      {menChairs.map((chair) => (
+                        <button
+                          key={chair.id}
+                          type="button"
+                          className={`pos-chair-btn ${selectedChairId === chair.id ? 'active' : ''}`}
+                          onClick={() => setSelectedChairId(chair.id)}
+                        >
+                          <span className="pos-chair-btn-name">{chair.name}</span>
+                          {chair.assignedStaff && (
+                            <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {womenChairs.length > 0 && (
+                  <div className="pos-chair-section" style={{ marginTop: '6px' }}>
+                    <div className="pos-chair-section-label" style={{ opacity: 0.7 }}>Women's Section</div>
+                    <div className="pos-chair-buttons">
+                      {womenChairs.map((chair) => (
+                        <button
+                          key={chair.id}
+                          type="button"
+                          className={`pos-chair-btn women ${selectedChairId === chair.id ? 'active' : ''}`}
+                          onClick={() => setSelectedChairId(chair.id)}
+                        >
+                          <span className="pos-chair-btn-name">{chair.name}</span>
+                          {chair.assignedStaff && (
+                            <span className="pos-chair-btn-staff">{chair.assignedStaff.name}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {chairs.length === 0 && (
@@ -2686,6 +2971,71 @@ export default function AdminBillingPOSPage() {
                       </div>
                     </div>
 
+                    {/* Section Selector */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>
+                        Section *
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setServiceFormSection('women');
+                            const first = serviceCategories.find((c) => c.gender === 'women' || c.gender === 'unisex');
+                            if (first) setServiceForm((prev) => ({ ...prev, categoryId: first.id }));
+                          }}
+                          style={{
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: serviceFormSection === 'women' ? '2px solid #EC4899' : '1px solid rgba(255,255,255,0.1)',
+                            background: serviceFormSection === 'women' ? 'rgba(236,72,153,0.18)' : '#121723',
+                            color: serviceFormSection === 'women' ? '#F472B6' : '#9CA3AF',
+                            fontSize: '12.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          👩 Women
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setServiceFormSection('men');
+                            const first = serviceCategories.find((c) => c.gender === 'men' || c.gender === 'unisex');
+                            if (first) setServiceForm((prev) => ({ ...prev, categoryId: first.id }));
+                          }}
+                          style={{
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: serviceFormSection === 'men' ? '2px solid #3B82F6' : '1px solid rgba(255,255,255,0.1)',
+                            background: serviceFormSection === 'men' ? 'rgba(59,130,246,0.18)' : '#121723',
+                            color: serviceFormSection === 'men' ? '#60A5FA' : '#9CA3AF',
+                            fontSize: '12.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🧔 Men
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setServiceFormSection('unisex')}
+                          style={{
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            border: serviceFormSection === 'unisex' ? '2px solid var(--gold-400)' : '1px solid rgba(255,255,255,0.1)',
+                            background: serviceFormSection === 'unisex' ? 'rgba(212,175,55,0.18)' : '#121723',
+                            color: serviceFormSection === 'unisex' ? 'var(--gold-400)' : '#9CA3AF',
+                            fontSize: '12.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          🔄 Unisex / All
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Category Selector */}
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px' }}>
@@ -2705,12 +3055,17 @@ export default function AdminBillingPOSPage() {
                         }}
                       >
                         <option value="">Select Category</option>
-                        {serviceCategories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.gender === 'men' ? '🧔 ' : cat.gender === 'women' ? '👩 ' : '🔄 '}
-                            {cat.name} ({cat.gender || 'unisex'})
-                          </option>
-                        ))}
+                        {serviceCategories
+                          .filter((cat) => {
+                            if (serviceFormSection === 'unisex') return true;
+                            return cat.gender === serviceFormSection || cat.gender === 'unisex';
+                          })
+                          .map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.gender === 'men' ? '🧔 ' : cat.gender === 'women' ? '👩 ' : '🔄 '}
+                              {cat.name} ({cat.gender || 'unisex'})
+                            </option>
+                          ))}
                       </select>
                     </div>
 
@@ -2735,6 +3090,101 @@ export default function AdminBillingPOSPage() {
                           resize: 'none',
                         }}
                       />
+                    </div>
+
+                    {/* Service Photo Upload from System */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '6px' }}>
+                        Service Photo (Upload from System)
+                      </label>
+                      <input
+                        type="file"
+                        ref={serviceFileInputRef}
+                        accept="image/*"
+                        onChange={handleServiceImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <div
+                        style={{
+                          background: '#121723',
+                          border: '1px dashed rgba(212, 175, 55, 0.4)',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            background: '#1A2130',
+                            flexShrink: 0,
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {serviceForm.image ? (
+                            <img
+                              src={serviceForm.image}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: '24px', opacity: 0.5 }}>📷</span>
+                          )}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => serviceFileInputRef.current?.click()}
+                              disabled={uploadingServiceImage}
+                              style={{
+                                background: 'rgba(212, 175, 55, 0.2)',
+                                border: '1px solid var(--gold-500)',
+                                color: 'var(--gold-400)',
+                                padding: '7px 14px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: uploadingServiceImage ? 'not-allowed' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              {uploadingServiceImage ? '⏳ Uploading...' : '📁 Choose Image from System'}
+                            </button>
+                            {serviceForm.image && (
+                              <button
+                                type="button"
+                                onClick={() => setServiceForm((prev) => ({ ...prev, image: '' }))}
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                                  color: '#F87171',
+                                  padding: '7px 12px',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                ✕ Remove
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            {serviceForm.image ? 'Image selected. Changes will save on update.' : 'Supports JPG, PNG, WebP or SVG from your system'}
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Action Buttons */}

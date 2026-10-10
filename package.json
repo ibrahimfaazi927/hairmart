@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:push": "prisma db push"
+    "prisma:push": "prisma db push",
+    "seed:women": "ts-node scripts/seed-women-services.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",

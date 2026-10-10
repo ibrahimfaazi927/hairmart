@@ -6,11 +6,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const status = searchParams.get('status');
+    const minimal = searchParams.get('minimal') === 'true';
 
     const where: any = {};
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { name: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search } },
       ];
     }
@@ -18,20 +19,55 @@ export async function GET(request: Request) {
       where.status = status;
     }
 
+    if (minimal) {
+      const customers = await prisma.customer.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          whatsapp: true,
+          status: true,
+          notes: true,
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 100,
+      });
+      return NextResponse.json(customers);
+    }
+
+    // CRM list mode: select lightweight appointment summary (no deep products or full relations)
     const customers = await prisma.customer.findMany({
       where,
       include: {
         appointments: {
-          include: {
-            services: { include: { service: true } },
-            package: true,
-            products: { include: { product: true } },
-            payment: true,
+          select: {
+            id: true,
+            totalAmount: true,
+            date: true,
+            status: true,
+            payment: {
+              select: {
+                amount: true,
+              },
+            },
+            services: {
+              select: {
+                service: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+              take: 2,
+            },
           },
           orderBy: { date: 'desc' },
+          take: 5,
         },
       },
       orderBy: { updatedAt: 'desc' },
+      take: 200,
     });
 
     return NextResponse.json(customers);

@@ -1,20 +1,50 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET() {
+let productsCache: { data: any[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000;
+
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const includeServices = searchParams.get('includeServices') === 'true';
+
+    const now = Date.now();
+    if (!includeServices && productsCache && now - productsCache.timestamp < CACHE_TTL_MS) {
+      return NextResponse.json(productsCache.data, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
+
     const products = await prisma.product.findMany({
       where: { active: true },
-      include: {
-        services: {
-          include: {
-            service: true,
-          },
-        },
-      },
+      ...(includeServices
+        ? {
+            include: {
+              services: {
+                include: {
+                  service: true,
+                },
+              },
+            },
+          }
+        : {}),
       orderBy: { sortOrder: 'asc' },
     });
-    return NextResponse.json(products);
+
+    if (!includeServices) {
+      productsCache = { data: products, timestamp: now };
+    }
+
+    return NextResponse.json(products, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
+        'X-Cache': 'MISS',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

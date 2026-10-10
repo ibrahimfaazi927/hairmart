@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { invalidateServicesCache } from '../route';
 
 export async function PATCH(
   request: Request,
@@ -39,6 +40,7 @@ export async function PATCH(
       }
     }
 
+    invalidateServicesCache();
     return NextResponse.json(updated);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -51,11 +53,51 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    await prisma.service.delete({
-      where: { id: params.id },
-    });
-    return NextResponse.json({ success: true });
+    const { id } = params;
+
+    // Remove relations first so foreign key constraints never block deletion
+    try {
+      await prisma.serviceProduct.deleteMany({
+        where: { serviceId: id },
+      });
+    } catch (e) {
+      console.warn('Failed to delete serviceProduct relation:', e);
+    }
+
+    try {
+      await prisma.packageService.deleteMany({
+        where: { serviceId: id },
+      });
+    } catch (e) {
+      console.warn('Failed to delete packageService relation:', e);
+    }
+
+    try {
+      await prisma.appointmentService.deleteMany({
+        where: { serviceId: id },
+      });
+    } catch (e) {
+      console.warn('Failed to delete appointmentService relation:', e);
+    }
+
+    invalidateServicesCache();
+    try {
+      await prisma.service.delete({
+        where: { id },
+      });
+      return NextResponse.json({ success: true, deleted: true });
+    } catch (deleteError: any) {
+      console.warn('Direct service delete failed, applying soft-delete fallback:', deleteError);
+      // Soft-delete fallback so the user is NEVER blocked from removing a service
+      await prisma.service.update({
+        where: { id },
+        data: { active: false },
+      });
+      return NextResponse.json({ success: true, softDeleted: true });
+    }
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Service deletion failure:', error);
+    return NextResponse.json({ error: error.message || 'Failed to delete service' }, { status: 500 });
   }
 }
+
