@@ -7,31 +7,62 @@ import {
   sendWhatsAppMessage,
 } from '@/lib/whatsapp';
 
-function getIstDateBounds() {
+function getDateBounds(customStartDate?: string | null, customEndDate?: string | null) {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   });
-  const istDateStr = formatter.format(new Date()); // YYYY-MM-DD
-  const startOfDay = new Date(`${istDateStr}T00:00:00.000+05:30`);
-  const endOfDay = new Date(`${istDateStr}T23:59:59.999+05:30`);
+  const todayIst = formatter.format(new Date()); // YYYY-MM-DD
 
-  const displayDateStr = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kolkata',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date());
+  const rawStart = customStartDate?.trim() || customEndDate?.trim() || todayIst;
+  const rawEnd = customEndDate?.trim() || customStartDate?.trim() || todayIst;
 
-  return { istDateStr, displayDateStr, startOfDay, endOfDay };
+  const [actualStart, actualEnd] = rawStart <= rawEnd ? [rawStart, rawEnd] : [rawEnd, rawStart];
+
+  const startOfDay = new Date(`${actualStart}T00:00:00.000+05:30`);
+  const endOfDay = new Date(`${actualEnd}T23:59:59.999+05:30`);
+
+  const formatDateDisplay = (isoStr: string) => {
+    try {
+      const d = new Date(`${isoStr}T12:00:00.000+05:30`);
+      return new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }).format(d);
+    } catch {
+      return isoStr;
+    }
+  };
+
+  const isMultiDay = actualStart !== actualEnd;
+  const displayDateStr = isMultiDay
+    ? `${formatDateDisplay(actualStart)} – ${formatDateDisplay(actualEnd)}`
+    : formatDateDisplay(actualStart);
+
+  return {
+    todayIst,
+    actualStart,
+    actualEnd,
+    isMultiDay,
+    displayDateStr,
+    startOfDay,
+    endOfDay,
+  };
 }
 
-async function compileEndOfDayData(closingNotes?: string) {
-  const { displayDateStr, startOfDay, endOfDay } = getIstDateBounds();
+async function compileEndOfDayData(options?: {
+  closingNotes?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+}) {
+  const { closingNotes, startDate, endDate } = options || {};
+  const { displayDateStr, actualStart, actualEnd, isMultiDay, startOfDay, endOfDay } = getDateBounds(startDate, endDate);
 
-  // 1. Fetch all appointments & payments created today in IST
+  // 1. Fetch all appointments & payments within bounds
   const appointments = await prisma.appointment.findMany({
     where: {
       createdAt: {
@@ -107,6 +138,7 @@ async function compileEndOfDayData(closingNotes?: string) {
   invoices.forEach((inv) => {
     const timeFormatter = new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',
+      ...(isMultiDay ? { day: 'numeric', month: 'short' } : {}),
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
@@ -138,6 +170,7 @@ async function compileEndOfDayData(closingNotes?: string) {
     if (!billMap.has(invNo) && (apt.status === 'completed' || apt.payment?.status === 'completed' || apt.totalAmount > 0)) {
       const timeFormatter = new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
+        ...(isMultiDay ? { day: 'numeric', month: 'short' } : {}),
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
@@ -230,6 +263,9 @@ async function compileEndOfDayData(closingNotes?: string) {
 
   return {
     dateStr: displayDateStr,
+    startDate: actualStart,
+    endDate: actualEnd,
+    isMultiDay,
     totalRevenue,
     totalBills: billsList.length,
     cashTotal,
@@ -250,9 +286,17 @@ async function compileEndOfDayData(closingNotes?: string) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const data = await compileEndOfDayData();
+    const { searchParams } = new URL(request.url);
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const date = searchParams.get('date');
+
+    const data = await compileEndOfDayData({
+      startDate: startDate || date,
+      endDate: endDate || date,
+    });
     return NextResponse.json({ success: true, ...data });
   } catch (error: any) {
     console.error('End of Day report error:', error);
@@ -264,9 +308,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
     const closingNotes = body.closingNotes || undefined;
+    const startDate = body.startDate || body.date || undefined;
+    const endDate = body.endDate || body.date || undefined;
     const sendCloudApi = !!body.sendCloudApi;
 
-    const data = await compileEndOfDayData(closingNotes);
+    const data = await compileEndOfDayData({
+      closingNotes,
+      startDate,
+      endDate,
+    });
 
     let cloudApiResult = null;
     if (sendCloudApi) {

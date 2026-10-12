@@ -150,7 +150,26 @@ export default function AdminBusinessReportsPage() {
 
   const handleSendEodToOwner = async () => {
     try {
-      const res = await fetch('/api/reports/end-of-day');
+      let url = '/api/reports/end-of-day';
+      if (range === 'custom') {
+        url += `?startDate=${encodeURIComponent(customStartDate)}&endDate=${encodeURIComponent(customEndDate)}`;
+      } else if (range === 'yesterday') {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        const yStr = d.toISOString().split('T')[0];
+        url += `?date=${encodeURIComponent(yStr)}`;
+      } else if (range === 'this_week') {
+        const d = new Date();
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
+        url += `?startDate=${encodeURIComponent(monday.toISOString().split('T')[0])}&endDate=${encodeURIComponent(new Date().toISOString().split('T')[0])}`;
+      } else if (range === 'this_month') {
+        const d = new Date();
+        d.setDate(1);
+        url += `?startDate=${encodeURIComponent(d.toISOString().split('T')[0])}&endDate=${encodeURIComponent(new Date().toISOString().split('T')[0])}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
         if (json.whatsappUrl) {

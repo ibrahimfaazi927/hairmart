@@ -306,6 +306,7 @@ export default function AdminBillingPOSPage() {
   const serviceFileInputRef = useRef<HTMLInputElement>(null);
   const [savingService, setSavingService] = useState(false);
   const [serviceManagerFilter, setServiceManagerFilter] = useState<'all' | 'men' | 'women'>('all');
+  const [serviceManagerSearch, setServiceManagerSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [serviceSearch, setServiceSearch] = useState('');
   const [showAllServices, setShowAllServices] = useState(false);
@@ -364,6 +365,9 @@ export default function AdminBillingPOSPage() {
   const [eodData, setEodData] = useState<any>(null);
   const [eodClosingNotes, setEodClosingNotes] = useState('');
   const [eodCopyNotice, setEodCopyNotice] = useState<string | null>(null);
+  const [eodPeriodMode, setEodPeriodMode] = useState<'today' | 'yesterday' | 'custom'>('today');
+  const [eodStartDate, setEodStartDate] = useState('');
+  const [eodEndDate, setEodEndDate] = useState('');
 
   // New Client Modal (Phone only required)
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -442,6 +446,7 @@ export default function AdminBillingPOSPage() {
     setEditingService(null);
     setServiceFormSection(posSection);
     setServiceForm({ name: '', price: '', duration: '', categoryId: '', description: '', image: '' });
+    setServiceManagerSearch('');
     setShowServiceManager(true);
   };
 
@@ -782,11 +787,22 @@ export default function AdminBillingPOSPage() {
     : filteredServices;
 
   // Services filtered for service manager modal
-  const managerFilteredServices = serviceManagerFilter === 'all'
-    ? services
-    : serviceManagerFilter === 'men'
-    ? menServices
-    : womenServices;
+  const baseManagerServices =
+    serviceManagerFilter === 'all'
+      ? services
+      : serviceManagerFilter === 'men'
+      ? menServices
+      : womenServices;
+
+  const managerFilteredServices = baseManagerServices.filter((s) => {
+    if (!serviceManagerSearch.trim()) return true;
+    const q = serviceManagerSearch.toLowerCase().trim();
+    const name = s.name.toLowerCase();
+    const cat = (s.category?.name || s.categoryName || '').toLowerCase();
+    const price = s.price.toString();
+    const desc = ((s as any).description || '').toLowerCase();
+    return name.includes(q) || cat.includes(q) || price.includes(q) || desc.includes(q);
+  });
 
   // Customer search suggestions (search by phone or name)
   const filteredCustomers = searchCustomer.trim()
@@ -1326,12 +1342,37 @@ export default function AdminBillingPOSPage() {
   };
 
   // ── End of Day (EOD) Report Handlers ──
-  const openEodModal = async () => {
-    setShowEodModal(true);
+  const getTodayIstString = () => {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+  };
+
+  const getYesterdayIstString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+  };
+
+  const loadEodData = async (start?: string, end?: string) => {
     setEodLoading(true);
     setEodCopyNotice(null);
     try {
-      const res = await fetch('/api/reports/end-of-day');
+      let url = '/api/reports/end-of-day';
+      if (start && end) {
+        url += `?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`;
+      } else if (start) {
+        url += `?date=${encodeURIComponent(start)}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
         setEodData(json);
@@ -1343,14 +1384,50 @@ export default function AdminBillingPOSPage() {
     }
   };
 
+  const openEodModal = async () => {
+    const today = getTodayIstString();
+    setEodPeriodMode('today');
+    setEodStartDate(today);
+    setEodEndDate(today);
+    setEodClosingNotes('');
+    setShowEodModal(true);
+    loadEodData(today, today);
+  };
+
+  const handleEodPeriodChange = (mode: 'today' | 'yesterday' | 'custom') => {
+    setEodPeriodMode(mode);
+    if (mode === 'today') {
+      const today = getTodayIstString();
+      setEodStartDate(today);
+      setEodEndDate(today);
+      loadEodData(today, today);
+    } else if (mode === 'yesterday') {
+      const yesterday = getYesterdayIstString();
+      setEodStartDate(yesterday);
+      setEodEndDate(yesterday);
+      loadEodData(yesterday, yesterday);
+    }
+  };
+
+  const handleApplyCustomEodRange = () => {
+    if (!eodStartDate && !eodEndDate) return;
+    const start = eodStartDate || eodEndDate;
+    const end = eodEndDate || eodStartDate;
+    loadEodData(start, end);
+  };
+
   const handleSendEodToOwner = async () => {
     if (!eodData) return;
     try {
-      if (eodClosingNotes.trim()) {
+      if (eodClosingNotes.trim() || eodPeriodMode !== 'today') {
         const res = await fetch('/api/reports/end-of-day', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ closingNotes: eodClosingNotes }),
+          body: JSON.stringify({
+            closingNotes: eodClosingNotes,
+            startDate: eodStartDate,
+            endDate: eodEndDate,
+          }),
         });
         if (res.ok) {
           const updated = await res.json();
@@ -2869,9 +2946,18 @@ export default function AdminBillingPOSPage() {
             <div style={{ padding: '18px 22px', overflowY: 'auto', flex: 1 }}>
               {serviceFormMode === 'list' ? (
                 <>
-                  {/* Filter + Add Button Row */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '10px', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                  {/* Filter + Search + Add Button Row */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '16px',
+                      gap: '10px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {(['all', 'men', 'women'] as const).map((f) => (
                         <button
                           key={f}
@@ -2893,25 +2979,106 @@ export default function AdminBillingPOSPage() {
                         </button>
                       ))}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleStartAddService}
+
+                    <div
                       style={{
-                        background: 'var(--gold-400)',
-                        color: '#0A0D14',
-                        padding: '8px 18px',
-                        borderRadius: '8px',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        border: 'none',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '5px',
+                        gap: '8px',
+                        flex: 1,
+                        justifyContent: 'flex-end',
+                        minWidth: '240px',
                       }}
                     >
-                      + Add Service
-                    </button>
+                      {/* Search Bar */}
+                      <div
+                        style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: serviceManagerSearch.trim()
+                            ? '1px solid var(--gold-400)'
+                            : '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '8px',
+                          padding: '0 10px',
+                          width: '100%',
+                          maxWidth: '240px',
+                          boxShadow: serviceManagerSearch.trim() ? '0 0 10px rgba(212, 175, 55, 0.15)' : 'none',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: serviceManagerSearch.trim() ? 'var(--gold-400)' : 'var(--text-muted)',
+                            fontSize: '13px',
+                            marginRight: '6px',
+                          }}
+                        >
+                          🔍
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="Search services..."
+                          value={serviceManagerSearch}
+                          onChange={(e) => setServiceManagerSearch(e.target.value)}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#FFF',
+                            padding: '6px 0',
+                            fontSize: '12px',
+                            outline: 'none',
+                            width: '100%',
+                          }}
+                        />
+                        {serviceManagerSearch && (
+                          <button
+                            type="button"
+                            onClick={() => setServiceManagerSearch('')}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.12)',
+                              border: 'none',
+                              color: '#CBD5E1',
+                              borderRadius: '50%',
+                              width: '16px',
+                              height: '16px',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: 0,
+                              marginLeft: '4px',
+                            }}
+                            title="Clear search"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleStartAddService}
+                        style={{
+                          background: 'var(--gold-400)',
+                          color: '#0A0D14',
+                          padding: '7px 16px',
+                          borderRadius: '8px',
+                          fontSize: '12.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        + Add Service
+                      </button>
+                    </div>
                   </div>
 
                   {/* Services Table */}
@@ -2942,7 +3109,9 @@ export default function AdminBillingPOSPage() {
                     <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
                       {managerFilteredServices.length === 0 ? (
                         <div style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                          No services found. Click "+ Add Service" to create one.
+                          {serviceManagerSearch.trim()
+                            ? `No services found matching "${serviceManagerSearch}".`
+                            : 'No services found. Click "+ Add Service" to create one.'}
                         </div>
                       ) : (
                         managerFilteredServices.map((s) => (
@@ -3993,10 +4162,11 @@ export default function AdminBillingPOSPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
+                    flexWrap: 'wrap',
                   }}
                 >
                   <span>📲</span>
-                  <span>End of Day Bills Report</span>
+                  <span>Bills &amp; EOD WhatsApp Report</span>
                   <span
                     style={{
                       background: 'rgba(34, 197, 94, 0.2)',
@@ -4012,7 +4182,7 @@ export default function AdminBillingPOSPage() {
                   </span>
                 </h3>
                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Audit summary of all today&apos;s bills, cash/UPI/card split, and staff attendance.
+                  Audit summary of bills register, payment split &amp; attendance for any date or custom range.
                 </p>
               </div>
               <button
@@ -4034,6 +4204,172 @@ export default function AdminBillingPOSPage() {
 
             {/* Modal Content */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+              {/* Date / Range Filter Toolbar */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  marginBottom: '16px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: 'var(--gold-400)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        marginRight: '2px',
+                      }}
+                    >
+                      📅 Report Date:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleEodPeriodChange('today')}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: eodPeriodMode === 'today' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        color: eodPeriodMode === 'today' ? '#4ADE80' : 'var(--text-secondary)',
+                        border: eodPeriodMode === 'today' ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEodPeriodChange('yesterday')}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: eodPeriodMode === 'yesterday' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        color: eodPeriodMode === 'yesterday' ? '#4ADE80' : 'var(--text-secondary)',
+                        border: eodPeriodMode === 'yesterday' ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Yesterday
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEodPeriodChange('custom')}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: eodPeriodMode === 'custom' ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        color: eodPeriodMode === 'custom' ? 'var(--gold-400)' : 'var(--text-secondary)',
+                        border: eodPeriodMode === 'custom' ? '1px solid rgba(212, 175, 55, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      🗓️ Custom Date / Range
+                    </button>
+                  </div>
+
+                  {eodData && (
+                    <div style={{ fontSize: '11.5px', color: '#CBD5E1', fontWeight: 600 }}>
+                      Selected: <span style={{ color: 'var(--gold-400)' }}>{eodData.dateStr}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Custom Date Pickers */}
+                {eodPeriodMode === 'custom' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      marginTop: '10px',
+                      paddingTop: '10px',
+                      borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>From:</label>
+                      <input
+                        type="date"
+                        value={eodStartDate}
+                        onChange={(e) => setEodStartDate(e.target.value)}
+                        style={{
+                          background: '#0B0F18',
+                          border: '1px solid rgba(212, 175, 55, 0.3)',
+                          borderRadius: '6px',
+                          color: '#FFF',
+                          padding: '5px 8px',
+                          fontSize: '12px',
+                          colorScheme: 'dark',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>To:</label>
+                      <input
+                        type="date"
+                        value={eodEndDate}
+                        onChange={(e) => setEodEndDate(e.target.value)}
+                        style={{
+                          background: '#0B0F18',
+                          border: '1px solid rgba(212, 175, 55, 0.3)',
+                          borderRadius: '6px',
+                          color: '#FFF',
+                          padding: '5px 8px',
+                          fontSize: '12px',
+                          colorScheme: 'dark',
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyCustomEodRange}
+                      disabled={!eodStartDate && !eodEndDate}
+                      style={{
+                        background: 'var(--gold-400)',
+                        color: '#0A0D14',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 14px',
+                        fontSize: '11.5px',
+                        fontWeight: 700,
+                        cursor: !eodStartDate && !eodEndDate ? 'not-allowed' : 'pointer',
+                        opacity: !eodStartDate && !eodEndDate ? 0.6 : 1,
+                      }}
+                    >
+                      Load Bills
+                    </button>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      (Set same date for a single day, or two dates for a range)
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {eodCopyNotice && (
                 <div
                   style={{
@@ -4054,7 +4390,7 @@ export default function AdminBillingPOSPage() {
               {eodLoading ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
                   <div style={{ fontSize: '24px', marginBottom: '8px' }}>⏳</div>
-                  <div>Compiling today&apos;s bills register and collections...</div>
+                  <div>Compiling bills register and collections...</div>
                 </div>
               ) : eodData ? (
                 <>
@@ -4166,7 +4502,9 @@ export default function AdminBillingPOSPage() {
                       }}
                     >
                       <span>📋 Bills Register ({eodData.billsList?.length || 0})</span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Sorted by bill time</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        {eodData.isMultiDay ? 'Showing all bills in range' : 'Sorted by bill time'}
+                      </span>
                     </div>
                     <div
                       style={{
@@ -4207,7 +4545,7 @@ export default function AdminBillingPOSPage() {
                         ))
                       ) : (
                         <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '11px' }}>
-                          No bills generated yet today.
+                          No bills recorded for this period.
                         </div>
                       )}
                     </div>

@@ -214,9 +214,11 @@ export function createEndOfDayReportMessage({
   }>;
   closingNotes?: string;
 }): string {
-  const billsText =
-    billsList.length > 0
-      ? billsList
+  const maxBillsToShow = 45;
+  const shownBills = billsList.slice(0, maxBillsToShow);
+  let billsText =
+    shownBills.length > 0
+      ? shownBills
           .map(
             (b, i) =>
               `${i + 1}. #${b.billNo} (${b.time}) - ₹${b.amount} [${(b.paymentMethod || 'cash').toUpperCase()}]\n   👤 ${b.customerName}${
@@ -224,11 +226,15 @@ export function createEndOfDayReportMessage({
               }\n   ✂️ ${b.services}`
           )
           .join('\n\n')
-      : 'No bills generated today.';
+      : 'No bills recorded for this period.';
+
+  if (billsList.length > maxBillsToShow) {
+    billsText += `\n\n... and ${billsList.length - maxBillsToShow} more bills (Total: ₹${totalRevenue.toLocaleString('en-IN')})`;
+  }
 
   const staffText =
     staffAttendance && staffAttendance.length > 0
-      ? `\n👔 *Staff On Duty Today:*\n${staffAttendance.map((s) => `• ${s}`).join('\n')}\n`
+      ? `\n👔 *Staff On Duty:*\n${staffAttendance.map((s) => `• ${s}`).join('\n')}\n`
       : '';
 
   const notesText =
@@ -236,9 +242,11 @@ export function createEndOfDayReportMessage({
       ? `\n📝 *Closing Remarks / Safe Handover:*\n${closingNotes.trim()}\n`
       : '';
 
+  const reportTitle = dateStr.includes('–') ? 'SALES & BILLS AUDIT' : 'END OF DAY REPORT';
+
   return (
-`💈 *HAIR MART UNISEX SALON — END OF DAY REPORT* 💈
-📅 *Date:* ${dateStr}
+`💈 *HAIR MART UNISEX SALON — ${reportTitle}* 💈
+📅 *Date / Period:* ${dateStr}
 📍 *Location:* Surathkal Cross, Mangalore
 
 ━━━━━━━━━━━━━━━━━━━━━
@@ -257,11 +265,11 @@ export function createEndOfDayReportMessage({
 • *Women's Section:* ₹${womenTotal.toLocaleString('en-IN')} (${womenCount} bills)
 ${staffText}${notesText}
 ━━━━━━━━━━━━━━━━━━━━━
-📋 *ALL BILLS REGISTER TODAY (${billsList.length}):*
+📋 *BILLS REGISTER (${billsList.length}):*
 ━━━━━━━━━━━━━━━━━━━━━
 ${billsText}
 
 ━━━━━━━━━━━━━━━━━━━━━
-✨ *Daily salon audit report generated automatically by Hair Mart POS.*`
+✨ *Salon audit report generated automatically by Hair Mart POS.*`
   );
 }
