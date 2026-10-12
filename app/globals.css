@@ -2452,23 +2452,24 @@ h1, h2, h3, h4, h5, h6 {
 .pos-gender-switch-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .pos-gender-switch-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 6px 12px;
   background: #0E121B;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   text-align: left;
+  min-height: 38px;
 }
 
 .pos-gender-switch-btn:hover {
@@ -2479,16 +2480,16 @@ h1, h2, h3, h4, h5, h6 {
 .pos-gender-switch-btn.active {
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.16) 0%, rgba(14, 18, 27, 0.95) 100%);
   border: 1.5px solid var(--gold-500);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(212, 175, 55, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(212, 175, 55, 0.1);
   color: #FFFFFF;
 }
 
 .pos-gender-switch-icon {
-  font-size: 24px;
+  font-size: 16px;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2509,10 +2510,11 @@ h1, h2, h3, h4, h5, h6 {
 .pos-gender-switch-title {
   display: block;
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: #FFFFFF;
+  line-height: 1.2;
 }
 
 .pos-gender-switch-btn.active .pos-gender-switch-title {
@@ -2521,19 +2523,20 @@ h1, h2, h3, h4, h5, h6 {
 
 .pos-gender-switch-sub {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
+  margin-top: 1px;
+  line-height: 1.2;
 }
 
 .pos-gender-count-badge {
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 12px;
+  padding: 2px 7px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
   letter-spacing: 0.02em;
@@ -3491,8 +3494,8 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .pos-layout-grid {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 10px;
     width: 100%;
     max-width: 100%;
   }
@@ -3502,50 +3505,177 @@ h1, h2, h3, h4, h5, h6 {
     max-width: 100%;
   }
 
+  .pos-layout-grid > div:last-child {
+    min-width: 280px;
+  }
+
+  /* Compact service cards grid for tablet */
   .pos-services-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
   }
 
   .pos-service-img-wrapper {
-    height: 110px;
+    height: 85px;
   }
 
   .pos-service-info {
-    padding: 10px 8px;
+    padding: 6px 7px;
+    gap: 4px;
   }
 
   .pos-service-name {
-    font-size: 12px;
+    font-size: 11px;
+    margin-bottom: 1px;
   }
 
   .pos-service-price {
-    font-size: 13px;
+    font-size: 12px;
   }
 
+  .pos-service-add-btn {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 14px;
+  }
+
+  .pos-service-card:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Compact category tabs */
   .pos-tab-btn {
-    padding: 8px 14px;
-    font-size: 12px;
-    min-height: 40px;
+    padding: 5px 12px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+
+  .pos-category-tabs {
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* Compact gender switcher */
+  .pos-gender-switch-container {
+    gap: 6px;
+    margin-bottom: 8px;
   }
 
   .pos-gender-switch-btn {
-    padding: 10px 12px;
-    min-height: 48px;
+    padding: 5px 8px;
+    min-height: 34px;
+    gap: 6px;
   }
 
-  .pos-chair-btn {
-    min-height: 48px;
-    padding: 6px 4px;
+  .pos-gender-switch-icon {
+    font-size: 15px;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
   }
 
+  .pos-gender-switch-title {
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+  }
+
+  .pos-gender-switch-sub {
+    font-size: 9.5px;
+  }
+
+  .pos-gender-count-badge {
+    font-size: 8.5px;
+    padding: 1px 5px;
+  }
+
+  /* Compact bill panel */
   .pos-current-bill-card {
-    padding: 14px;
-    top: 70px;
+    padding: 10px;
+    top: 60px;
+  }
+
+  .pos-bill-header {
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+
+  .pos-bill-title {
+    font-size: 13px;
   }
 
   .pos-bill-items-list {
-    max-height: 240px;
+    max-height: 200px;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .pos-bill-item-row-classic {
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .pos-bill-client-header {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+
+  /* Compact customer banner */
+  .pos-customer-banner {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    gap: 10px;
+  }
+
+  .pos-client-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .pos-client-name {
+    font-size: 13px;
+  }
+
+  .pos-client-meta {
+    font-size: 11px;
+    gap: 8px;
+  }
+
+  .pos-client-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  /* Compact chair selector */
+  .pos-chair-selection-card {
+    padding: 10px;
+  }
+
+  .pos-chair-title {
+    font-size: 13px;
+  }
+
+  .pos-chair-buttons {
+    gap: 6px;
+  }
+
+  .pos-chair-btn {
+    min-height: 40px;
+    padding: 5px 4px;
+  }
+
+  .pos-chair-btn-name {
+    font-size: 11px;
+  }
+
+  .pos-chair-btn-staff {
+    font-size: 9px;
+  }
+
+  .pos-chair-section-label {
+    font-size: 10px;
   }
 
   /* Admin Table touch improvements */
@@ -3566,4 +3696,5 @@ h1, h2, h3, h4, h5, h6 {
     gap: 14px;
   }
 }
+
 

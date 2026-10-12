@@ -684,6 +684,7 @@ export default function AdminBillingPOSPage() {
   const menServices = services.filter(isMenService);
   const womenServices = services.filter(isWomenService);
   const activeSectionServices = posSection === 'men' ? menServices : womenServices;
+  const otherSectionServices = posSection === 'men' ? womenServices : menServices;
 
   const currentCategories = posSection === 'men' ? MEN_CATEGORIES : WOMEN_CATEGORIES;
 
@@ -764,6 +765,17 @@ export default function AdminBillingPOSPage() {
     }
     return cat.includes(selectedCategory.toLowerCase()) || name.includes(selectedCategory.toLowerCase());
   });
+
+  // Cross-section matches when searching
+  const otherSectionMatches = serviceSearch.trim()
+    ? otherSectionServices.filter((s) => {
+        const q = serviceSearch.toLowerCase().trim();
+        const name = s.name.toLowerCase();
+        const cat = (s.category?.name || s.categoryName || '').toLowerCase();
+        const price = s.price.toString();
+        return name.includes(q) || cat.includes(q) || price.includes(q);
+      })
+    : [];
 
   const displayedServices = (posSection === 'women' && selectedCategory === 'All' && !serviceSearch.trim() && !showAllServices)
     ? filteredServices.slice(0, 36)
@@ -1388,14 +1400,14 @@ export default function AdminBillingPOSPage() {
         style={{
           background: 'linear-gradient(135deg, rgba(20, 24, 33, 0.95), rgba(13, 17, 26, 0.95))',
           border: '1px solid rgba(212, 175, 55, 0.22)',
-          borderRadius: '10px',
-          padding: '8px 14px',
-          marginBottom: '12px',
+          borderRadius: '8px',
+          padding: '6px 10px',
+          marginBottom: '8px',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '10px',
+          gap: '8px',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1407,10 +1419,10 @@ export default function AdminBillingPOSPage() {
               background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.08))',
               border: '1px solid rgba(34, 197, 94, 0.5)',
               color: '#4ADE80',
-              padding: '6px 14px',
-              borderRadius: '8px',
+              padding: '5px 10px',
+              borderRadius: '6px',
               fontWeight: 700,
-              fontSize: '12px',
+              fontSize: '11px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -1422,29 +1434,8 @@ export default function AdminBillingPOSPage() {
             <span>📲</span>
             <span>Send EOD to Owner (WhatsApp)</span>
           </button>
-
-          {/* Manage Services Button */}
-          <button
-            type="button"
-            onClick={() => setShowServiceManager(true)}
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#CBD5E1',
-              padding: '6px 12px',
-              borderRadius: '8px',
-              fontWeight: 500,
-              fontSize: '12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
-          >
-            <span>📋</span>
-            <span>Manage Services</span>
-          </button>
         </div>
+
 
 
       </div>
@@ -1488,12 +1479,12 @@ export default function AdminBillingPOSPage() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
               {posSection === 'men' ? "Men's Services Catalogue" : "Women's Services Catalogue"}
             </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                 {filteredServices.length} services
               </span>
               <button
@@ -1503,19 +1494,95 @@ export default function AdminBillingPOSPage() {
                   background: 'rgba(212, 175, 55, 0.15)',
                   border: '1px solid rgba(212, 175, 55, 0.4)',
                   color: 'var(--gold-400)',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '4px',
                   transition: 'all 0.2s',
                 }}
               >
                 ✏️ Edit Services
               </button>
+            </div>
+          </div>
+
+          {/* Quick Service Search Bar */}
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                background: '#090B10',
+                border: serviceSearch.trim()
+                  ? '1px solid var(--gold-400)'
+                  : '1px solid rgba(212, 175, 55, 0.28)',
+                borderRadius: '7px',
+                padding: '0 10px',
+                boxShadow: serviceSearch.trim() ? '0 0 10px rgba(212, 175, 55, 0.15)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ color: 'var(--gold-400)', marginRight: '8px', fontSize: '13px' }}>🔍</span>
+              <input
+                type="text"
+                placeholder={`Search ${posSection === 'men' ? "Men's" : "Women's"} services (e.g. Haircut, Spa, Shave, 250)...`}
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setServiceSearch('');
+                }}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  padding: '7px 0',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              />
+              {serviceSearch.trim() && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      background: 'rgba(212, 175, 55, 0.2)',
+                      color: 'var(--gold-300)',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {filteredServices.length} found
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setServiceSearch('')}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.12)',
+                      border: 'none',
+                      color: '#E2E8F0',
+                      borderRadius: '50%',
+                      width: '18px',
+                      height: '18px',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                    title="Clear search (Esc)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1525,8 +1592,11 @@ export default function AdminBillingPOSPage() {
               <button
                 key={cat}
                 type="button"
-                className={`pos-tab-btn ${selectedCategory === cat ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(cat)}
+                className={`pos-tab-btn ${selectedCategory === cat && !serviceSearch.trim() ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedCategory(cat);
+                  setServiceSearch('');
+                }}
               >
                 {cat}
               </button>
@@ -1579,6 +1649,70 @@ export default function AdminBillingPOSPage() {
               );
             })}
           </div>
+
+          {/* Empty state when no services match search or category */}
+          {displayedServices.length === 0 && (
+            <div
+              style={{
+                padding: '28px 16px',
+                textAlign: 'center',
+                background: 'rgba(15, 19, 29, 0.7)',
+                border: '1px dashed rgba(212, 175, 55, 0.25)',
+                borderRadius: '8px',
+                margin: '8px 0',
+              }}
+            >
+              <div style={{ fontSize: '26px', marginBottom: '6px' }}>🔍</div>
+              <div style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: 600 }}>
+                {serviceSearch.trim()
+                  ? `No services found matching "${serviceSearch}" in ${posSection === 'men' ? "Men's Catalogue" : "Women's Catalogue"}`
+                  : 'No services available in this category'}
+              </div>
+              {serviceSearch.trim() && otherSectionMatches.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPosSection(posSection === 'men' ? 'women' : 'men')}
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.25), rgba(212, 175, 55, 0.1))',
+                      border: '1px solid var(--gold-400)',
+                      color: 'var(--gold-300)',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '11.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>Found {otherSectionMatches.length} matching in {posSection === 'men' ? "Women's Salon" : "Men's Salon"}</span>
+                    <span>→ Switch Section</span>
+                  </button>
+                </div>
+              )}
+              {serviceSearch.trim() && (
+                <div style={{ marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setServiceSearch('')}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: '#CBD5E1',
+                      padding: '4px 12px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {filteredServices.length > displayedServices.length && (
             <div style={{ textAlign: 'center', margin: '12px 0' }}>

@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readFile } from 'fs/promises';
 import path from 'path';
+
+// Detect if running on Vercel (serverless) where filesystem is read-only
+const isVercel = !!process.env.VERCEL;
+
+function getUploadsDir(subfolder: string): string {
+  if (isVercel) {
+    // On Vercel, /tmp is the only writable directory
+    return path.join('/tmp', 'uploads', subfolder);
+  }
+  // Local dev: write to public/uploads
+  return path.join(process.cwd(), 'public', 'uploads', subfolder);
+}
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +39,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     // Ensure uploads directory exists
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', subfolder);
+    const uploadsDir = getUploadsDir(subfolder);
     await mkdir(uploadsDir, { recursive: true });
 
     // Clean filename
@@ -39,7 +51,11 @@ export async function POST(request: Request) {
     const filePath = path.join(uploadsDir, uniqueFileName);
     await writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${subfolder}/${uniqueFileName}`;
+    // On Vercel, serve via the API route since /tmp isn't publicly accessible
+    // On local dev, serve directly from /public
+    const publicUrl = isVercel
+      ? `/api/upload?file=${subfolder}/${uniqueFileName}`
+      : `/uploads/${subfolder}/${uniqueFileName}`;
 
     return NextResponse.json({
       success: true,
@@ -50,5 +66,47 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('File upload error:', error);
     return NextResponse.json({ error: error.message || 'File upload failed' }, { status: 500 });
+  }
+}
+
+// GET handler to serve uploaded files from /tmp on Vercel
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const filePath = searchParams.get('file');
+
+    if (!filePath) {
+      return NextResponse.json({ error: 'No file specified' }, { status: 400 });
+    }
+
+    // Sanitize path to prevent directory traversal
+    const sanitized = filePath.replace(/\.\./g, '').replace(/^\//, '');
+    const fullPath = isVercel
+      ? path.join('/tmp', 'uploads', sanitized)
+      : path.join(process.cwd(), 'public', 'uploads', sanitized);
+
+    const fileBuffer = await readFile(fullPath);
+
+    // Determine content type from extension
+    const ext = path.extname(sanitized).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+      '.avif': 'image/avif',
+    };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  } catch (error: any) {
+    console.error('File serve error:', error);
+    return NextResponse.json({ error: 'File not found' }, { status: 404 });
   }
 }
